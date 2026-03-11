@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading {{ summoner }} – OTP Shaco</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        body { background: #0B0D11; color: #E5E7EB; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .stat-num { font-family: 'Barlow Condensed', sans-serif; }
+        .card { background: #13161C; border: 1px solid #1E2128; border-radius: 12px; }
+
+        @keyframes spin-slow  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse-glow { 0%,100% { filter: drop-shadow(0 0 8px #C89B3C66); } 50% { filter: drop-shadow(0 0 20px #C89B3C99); } }
+        @keyframes fadeIn     { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes shimmer    { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+        .shaco-spin {
+            animation: spin-slow 3s linear infinite, pulse-glow 2s ease-in-out infinite;
+        }
+        .progress-bar {
+            height: 4px; border-radius: 2px; background: #1E2128;
+            overflow: hidden; position: relative;
+        }
+        .progress-fill {
+            height: 100%; border-radius: 2px;
+            background: linear-gradient(90deg, #C89B3C, #F0C060, #C89B3C);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            transition: width 0.5s ease;
+        }
+        .progress-fill.indeterminate {
+            width: 40% !important;
+            animation: shimmer 1.5s infinite, slide 1.5s ease-in-out infinite;
+        }
+        @keyframes slide {
+            0%   { margin-left: -40%; }
+            100% { margin-left: 100%; }
+        }
+
+        .tip-box { animation: fadeIn 0.5s ease forwards; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse-glow 1s ease-in-out infinite; }
+        .status-dot.running { background: #C89B3C; }
+        .status-dot.done    { background: #4ADE80; animation: none; }
+        .status-dot.error   { background: #F87171; animation: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="absolute top-0 left-0 right-0 px-6 py-4" style="border-bottom:1px solid #1E2128;">
+        <a href="/" class="flex items-center gap-2">
+            <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                 style="width:28px;height:28px;border-radius:6px;border:1px solid #C89B3C44;" alt="Shaco">
+            <span style="color:#C89B3C;font-weight:700;font-size:14px;">OTP Shaco</span>
+        </a>
+    </div>
+
+    <!-- Main content -->
+    <div class="card p-8 mx-4" style="max-width:480px;width:100%;">
+
+        <!-- Shaco icon spinning -->
+        <div class="flex justify-center mb-6">
+            <div class="relative">
+                <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                     class="shaco-spin"
+                     style="width:80px;height:80px;border-radius:16px;border:2px solid #C89B3C44;"
+                     alt="Shaco">
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold">Loading data</h1>
+            <p class="text-lg font-bold mt-1" style="color:#C89B3C;">{{ summoner }}
+                <span class="text-gray-600 font-normal text-sm">#{{ tag }}</span>
+            </p>
+            <p class="text-sm text-gray-500 mt-1">{{ region }}</p>
+        </div>
+
+        <!-- Status + progress -->
+        <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <div id="statusDot" class="status-dot running"></div>
+                    <span id="statusText" class="text-sm text-gray-400">Connecting to Riot API...</span>
+                </div>
+                <span id="progressPct" class="text-sm font-bold" style="color:#C89B3C;">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill indeterminate" style="width:40%;"></div>
+            </div>
+            <div class="flex justify-between mt-1">
+                <span id="gamesFound" class="text-xs text-gray-600">0 Shaco games found</span>
+                <span id="gamesDb" class="text-xs text-gray-600">0 in database</span>
+            </div>
+        </div>
+
+        <!-- Phase indicator -->
+        <div class="flex gap-2 mb-6">
+            <div id="phase1" class="flex-1 text-center py-1.5 rounded text-xs font-semibold" style="background:#1A1D24;color:#C89B3C;border:1px solid #C89B3C44;">
+                ⚡ Fetching Shaco games...
+            </div>
+        </div>
+
+        <!-- Tip of the day -->
+        <div id="tipBox" class="tip-box rounded-lg p-3 text-xs text-gray-500" style="background:#0F1218;border:1px solid #1E2128;">
+            <span style="color:#C89B3C;font-weight:600;">💡 Did you know:</span>
+            <span id="tipText"> Shaco is the only champion with stealth available from level 1.</span>
+        </div>
+
+    </div>
+
+    <!-- Footer note -->
+    <p class="text-xs text-gray-700 mt-6 text-center px-4">
+        First load takes ~30 seconds. Subsequent visits will be instant.
+    </p>
+
+<script>
+const REGION   = "{{ region_lower }}";
+const SUMMONER = "{{ summoner }}";
+const TAG      = "{{ tag }}";
+
+const tips = [
+    "Shaco is the only champion with stealth available from level 1.",
+    "Shaco's Jack in the Box (W) was originally designed as a mass crowd-control spell.",
+    "AP Shaco has one of the highest burst combos in the game at level 6.",
+    "Shaco's ultimate (R) clone can use items independently.",
+    "Shaco is statistically one of the hardest champions to master in the game.",
+    "Shaco's passive deals 20% bonus damage when attacking from behind.",
+    "In Korea, Shaco jungle has one of the highest ban rates in high elo.",
+    "Shaco's clone has the exact same build as the real Shaco.",
+];
+
+let tipIndex = 0;
+function rotateTip() {
+    tipIndex = (tipIndex + 1) % tips.length;
+    document.getElementById('tipText').textContent = ' ' + tips[tipIndex];
+}
+setInterval(rotateTip, 5000);
+
+function showErrorBox(msg, canRetry = true) {
+    const box = document.createElement('div');
+    box.className = 'mt-4 rounded-lg p-4 text-sm text-center';
+    box.style.cssText = 'background:#1A0A0A;border:1px solid #EF444444;color:#FCA5A5;';
+    box.innerHTML = msg;
+    if (canRetry) {
+        box.innerHTML += `<br><a href="/" class="mt-2 inline-block text-xs" style="color:#C89B3C;">← Search another player</a>`;
+    } else {
+        box.innerHTML += `<br><a href="/" class="mt-2 inline-block text-xs" style="color:#C89B3C;">← Back to home</a>`;
+    }
+    document.querySelector('.card').appendChild(box);
+}
+
+let pollInterval;
+let redirected = false;
+
+function formatStatus(data) {
+    const dot  = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    const pct  = document.getElementById('progressPct');
+    const fill = document.getElementById('progressFill');
+    const gf   = document.getElementById('gamesFound');
+    const gdb  = document.getElementById('gamesDb');
+
+    if (!data) return;
+
+    const progress = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+    gdb.textContent = `${data.games_in_db || 0} in database`;
+
+    if (data.status === 'running') {
+        dot.className = 'status-dot running';
+        if (data.total > 0) {
+            fill.classList.remove('indeterminate');
+            fill.style.width = progress + '%';
+            pct.textContent = progress + '%';
+            text.textContent = `Processing game ${data.progress} of ${data.total}...`;
+            gf.textContent = `${data.nuevas || 0} Shaco games found`;
+        } else {
+            text.textContent = 'Looking up player on Riot (trying tags)...';
+            pct.textContent = '...';
+        }
+
+        if (data.games_in_db >= 5 && !redirected) {
+            redirected = true;
+            text.textContent = 'Data ready! Redirecting...';
+            dot.className = 'status-dot done';
+            fill.classList.remove('indeterminate');
+            fill.style.width = '100%';
+            pct.textContent = '100%';
+            setTimeout(() => {
+                window.location.href = `/player-page/${REGION}/${encodeURIComponent(SUMMONER)}?tag=${TAG}`;
+            }, 800);
+        }
+    } else if (data.status === 'done') {
+        if (!redirected && data.games_in_db > 0) {
+            redirected = true;
+            dot.className = 'status-dot done';
+            fill.classList.remove('indeterminate');
+            fill.style.width = '100%';
+            pct.textContent = '100%';
+            text.textContent = 'Done! Redirecting to profile...';
+            setTimeout(() => {
+                window.location.href = `/player-page/${REGION}/${encodeURIComponent(SUMMONER)}?tag=${TAG}`;
+            }, 800);
+        } else if (data.games_in_db === 0) {
+            dot.className = 'status-dot error';
+            text.textContent = 'No Shaco games found for this player.';
+            clearInterval(pollInterval);
+        }
+    } else if (data.status === 'not_found') {
+        clearInterval(pollInterval);
+        dot.className = 'status-dot error';
+        fill.classList.remove('indeterminate');
+        fill.style.background = '#EF4444';
+        fill.style.width = '100%';
+        pct.textContent = '—';
+        text.textContent = `Player "${SUMMONER}" not found on Riot (${REGION.toUpperCase()}).`;
+        showErrorBox(`Player <strong>${SUMMONER}</strong> was not found on Riot Games. Double-check the name and tag.`, false);
+    } else if (data.status === 'no_shaco') {
+        clearInterval(pollInterval);
+        dot.className = 'status-dot error';
+        fill.classList.remove('indeterminate');
+        fill.style.background = '#F59E0B';
+        fill.style.width = '100%';
+        pct.textContent = '—';
+        text.textContent = data.error || `${SUMMONER} has no ranked Shaco games.`;
+        showErrorBox(`<strong>${SUMMONER}</strong> exists on Riot but has no recent ranked Shaco games. Tell them to play Shaco! 🃏`, false);
+    } else if (data.status === 'error') {
+        dot.className = 'status-dot error';
+        text.textContent = `Error: ${data.error || 'Could not connect to Riot API'}`;
+        fill.style.background = '#EF4444';
+        fill.classList.remove('indeterminate');
+        fill.style.width = '100%';
+        clearInterval(pollInterval);
+    }
+}
+
+async function poll() {
+    try {
+        const res  = await fetch(`/fetch-status/${REGION}/${encodeURIComponent(SUMMONER)}`);
+        const data = await res.json();
+        formatStatus(data);
+    } catch(e) {
+        console.error('Poll error:', e);
+    }
+}
+
+// Start polling immediately
+poll();
+pollInterval = setInterval(poll, 2500);
+</script>
+</body>
+</html>

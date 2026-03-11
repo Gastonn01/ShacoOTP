@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ summoner }} – Shaco Stats | OTP Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        body { background: #0B0D11; }
+        .stat-num { font-family: 'Barlow Condensed', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0B0D11; }
+        ::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 3px; }
+        .card { background: #13161C; border: 1px solid #1E2128; border-radius: 8px; }
+        .match-card { border-radius: 8px; overflow: hidden; transition: transform 0.15s; }
+        .match-card:hover { transform: translateX(2px); }
+        .match-win  { background: linear-gradient(90deg, #0B1E30 0%, #0D1B2A 100%); border-left: 3px solid #4A90D9; }
+        .match-loss { background: linear-gradient(90deg, #1E0B0B 0%, #1A0C0C 100%); border-left: 3px solid #D94A4A; }
+        .match-win:hover  { background: linear-gradient(90deg, #0D2438 0%, #102335 100%); }
+        .match-loss:hover { background: linear-gradient(90deg, #250D0D 0%, #200E0E 100%); }
+        .match-row { min-height: 80px; }
+        .player-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62px; color: #9CA3AF; }
+        .player-name.is-me { color: #C89B3C; font-weight: 700; }
+        .vs-divider { width: 1px; background: #2A2D35; align-self: stretch; margin: 2px 5px; }
+        .keystone-icon { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #2A2D3588; background: #0F1218; }
+        .col-sep { width: 1px; background: #1E2128; align-self: stretch; margin: 8px 0; }
+        .filter-tab {
+            padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; color: #6B7280;
+            background: transparent; border: 1px solid transparent; text-decoration: none; display: inline-block;
+        }
+        .filter-tab:hover { color: #E5E7EB; background: #1E2128; }
+        .filter-tab.active { color: #C89B3C; background: #1E1A10; border-color: #C89B3C44; }
+        .wr-bar-bg { background: #1E2128; border-radius: 3px; height: 4px; }
+        .wr-bar { height: 4px; border-radius: 3px; transition: width 0.6s ease; }
+        .matchup-row { transition: background 0.15s; border-radius: 6px; }
+        .matchup-row:hover { background: #1E2128; }
+        .header-bg { background: linear-gradient(180deg, #0D1117 0%, #0B0D11 100%); border-bottom: 1px solid #1E2128; }
+        .search-input {
+            background: #13161C; border: 1px solid #2A2D35; color: #E5E7EB;
+            border-radius: 6px; padding: 8px 14px; font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: #C89B3C; }
+        .search-input::placeholder { color: #4B5563; }
+        .accent { color: #C89B3C; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up  { animation: fadeUp 0.3s ease forwards; }
+        .fade-up-2{ animation: fadeUp 0.3s 0.1s ease both; }
+        .fade-up-3{ animation: fadeUp 0.3s 0.2s ease both; }
+        .fade-up-4{ animation: fadeUp 0.3s 0.3s ease both; }
+        .detail-panel { background: #0F1218; border-top: 1px solid #1E2128; }
+        .rank-badge {
+            background: linear-gradient(135deg, #C89B3C22, #C89B3C11);
+            border: 1px solid #C89B3C44; border-radius: 4px;
+            padding: 2px 8px; font-size: 11px; color: #C89B3C; font-weight: 600;
+        }
+        .item-icon    { width: 26px; height: 26px; border-radius: 4px; border: 1px solid #2A2D35; }
+        .item-icon-sm { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #2A2D35; }
+        .item-empty   { width: 26px; height: 26px; border-radius: 4px; background: #1A1D24; border: 1px solid #2A2D35; }
+        #autocomplete-list {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+            background: #13161C; border: 1px solid #2A2D35; border-top: none;
+            border-radius: 0 0 6px 6px; overflow: hidden;
+        }
+        .ac-item { padding: 8px 14px; cursor: pointer; font-size: 13px; color: #E5E7EB; display: flex; align-items: center; gap: 8px; transition: background 0.1s; }
+        .ac-item:hover { background: #1E2128; }
+        .team-row { display: flex; align-items: center; gap: 4px; padding: 4px 4px; border-radius: 4px; }
+        .rune-icon  { width: 18px; height: 18px; border-radius: 50%; background: #0F1218; border: 1px solid #2A2D3566; }
+        .trinket-icon { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #C89B3C33; opacity: 0.8; }
+        .trinket-sep { width: 1px; height: 16px; background: #2A2D35; margin: 0 2px; }
+        .team-row.is-me { background: #C89B3C11; }
+        select option { background: #13161C; }
+        .tier-iron        { color: #8B7355; }
+        .tier-bronze      { color: #CD7F32; }
+        .tier-silver      { color: #A8A9AD; }
+        .tier-gold        { color: #C89B3C; }
+        .tier-platinum    { color: #00B4D8; }
+        .tier-emerald     { color: #50C878; }
+        .tier-diamond     { color: #A6C4E0; }
+        .tier-master      { color: #9B59B6; }
+        .tier-grandmaster { color: #E74C3C; }
+        .tier-challenger  { color: #F1C40F; }
+
+        /* Queue type badge */
+        .queue-badge {
+            font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+            white-space: nowrap; letter-spacing: 0.3px;
+        }
+        .queue-solo  { background: #1E1A10; color: #C89B3C; border: 1px solid #C89B3C44; }
+        .queue-flex  { background: #0F1E35; color: #4A90D9; border: 1px solid #4A90D944; }
+        .queue-aram  { background: #1A1030; color: #9B59B6; border: 1px solid #9B59B644; }
+        .queue-other { background: #1A1A1A; color: #6B7280; border: 1px solid #2A2D3544; }
+        /* Elo in hero */
+        .elo-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 6px;
+            background: linear-gradient(135deg, #1A1510, #13100A);
+            border: 1px solid #C89B3C55;
+        }
+        .champ-preview-icon { width: 22px; height: 22px; border-radius: 50%; }
+        .badge-stolen  { background:#1A1030; color:#C084FC; border:1px solid #9333EA55; font-size:10px; font-weight:700; padding:1px 5px; border-radius:4px; }
+        .badge-fb      { background:#1A1000; color:#FBBF24; border:1px solid #F59E0B55; font-size:10px; font-weight:700; padding:1px 5px; border-radius:4px; }
+        .badge-multi   { background:#0F1A10; color:#4ADE80; border:1px solid #22C55E55; font-size:10px; font-weight:700; padding:1px 5px; border-radius:4px; }
+        .badge-penta   { background:#2A0A0A; color:#F87171; border:1px solid #EF444455; font-size:10px; font-weight:800; padding:1px 6px; border-radius:4px; letter-spacing:0.5px; }
+        .badge-surr    { background:#1A1A1A; color:#6B7280; border:1px solid #37414F; font-size:10px; padding:1px 5px; border-radius:4px; }
+        .spell-icon    { width:24px; height:24px; border-radius:4px; border:1px solid #2A2D35; }
+        .spell-icon-sm { width:18px; height:18px; border-radius:3px; border:1px solid #2A2D3566; }
+        .stat-pill     { display:inline-flex; align-items:center; gap:4px; background:#1A1D24; border:1px solid #2A2D35; border-radius:6px; padding:3px 8px; font-size:11px; }
+        .highlight-card { background:#13161C; border:1px solid #1E2128; border-radius:8px; padding:10px 12px; text-align:center; }
+        .rec-banner {
+            border-radius: 8px; padding: 12px 16px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .rec-ap   { background: #1E1030; border: 1px solid #7C3AED44; }
+        .rec-ad   { background: #1A0E00; border: 1px solid #F97316aa; }
+        .rec-neutral { background: #0F1A2E; border: 1px solid #4A90D944; }
+        .rec-info { background: #13161C; border: 1px solid #2A2D35; }
+
+        /* Build comparison */
+        .build-col { flex: 1; padding: 12px; border-radius: 6px; }
+        .build-col-ap { background: #1A0E2E; border: 1px solid #7C3AED33; }
+        .build-col-ad { background: #1A0E00; border: 1px solid #F9731633; }
+        .build-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #1E2128; }
+        .build-stat-row:last-child { border-bottom: none; }
+
+        /* Best conditions */
+        .condition-bar { height: 3px; border-radius: 2px; }
+        .winner-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen">
+
+<!-- HEADER -->
+<header class="header-bg px-6 py-3 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center gap-4">
+        <a href="/" class="flex items-center gap-2 mr-2 shrink-0 hover:opacity-80 transition-opacity" title="Back to home">
+            <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/Shaco.png"
+                 style="width:22px;height:22px;border-radius:5px;border:1px solid #C89B3C44;" alt="Shaco">
+            <span class="font-bold text-sm tracking-wider accent">OTP<span class="text-gray-400"> SHACO</span></span>
+        </a>
+        <form id="searchForm" class="flex gap-2 flex-1 max-w-xl">
+            <div class="relative flex-1">
+                <input type="text" id="summonerInput" placeholder="Summoner name" class="search-input w-full" autocomplete="off"/>
+                <div id="autocomplete-list" class="hidden"></div>
+            </div>
+            <input type="text" id="tagInput" placeholder="TAG" class="search-input w-20"/>
+            <select id="regionSelect" class="search-input w-24 cursor-pointer">
+                <option value="euw1">EUW</option><option value="eun1">EUNE</option>
+                <option value="na1">NA</option><option value="la1">LAN</option>
+                <option value="la2">LAS</option><option value="br1">BR</option><option value="kr">KR</option>
+            </select>
+            <button type="submit" class="px-4 py-2 rounded-md text-sm font-bold shrink-0" style="background:#C89B3C;color:#0B0D11;">Search</button>
+        </form>
+        <p id="searchStatus" class="text-gray-500 text-xs hidden shrink-0"></p>
+    </div>
+</header>
+
+<!-- HERO -->
+<div style="background:linear-gradient(180deg,#0D1520 0%,#0B0D11 100%);border-bottom:1px solid #1E2128;">
+    <div class="max-w-6xl mx-auto px-6 py-5 fade-up">
+        <div class="flex items-center gap-5 flex-wrap">
+
+            <!-- Shaco icon -->
+            <div class="relative shrink-0">
+                <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/Shaco.png"
+                     style="width:72px;height:72px;border:2px solid #C89B3C44;border-radius:12px;" alt="Shaco">
+                <div class="absolute -bottom-1 -right-1 rank-badge">S15</div>
+            </div>
+
+            <!-- Name + region -->
+            <div class="shrink-0">
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold">{{ summoner }}</h1>
+                    <button id="refreshBtn" onclick="refreshPlayer()"
+                        class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all"
+                        style="background:#1E2128;border:1px solid #2A2D35;color:#9CA3AF;"
+                        onmouseover="this.style.borderColor='#C89B3C';this.style.color='#C89B3C';"
+                        onmouseout="this.style.borderColor='#2A2D35';this.style.color='#9CA3AF';">
+                        <span id="refreshIcon">↻</span>
+                        <span id="refreshText">Refresh</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-gray-500 text-sm">{{ region | upper }}</span>
+                    <span class="text-gray-700">·</span>
+                    <span class="text-gray-500 text-sm">{{ total_unfiltered }} games</span>
+                </div>
+            </div>
+
+            <!-- Global stats -->
+            <div class="ml-auto flex gap-8 shrink-0">
+                <div class="text-center">
+                    <p class="stat-num text-2xl font-bold {% if full_stats.winrate >= 55 %}text-green-400{% elif full_stats.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ full_stats.winrate }}%</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Win Rate</p>
+                </div>
+                <div class="text-center">
+                    <p class="stat-num text-2xl font-bold text-blue-400">{{ full_stats.kda.ratio }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5">KDA</p>
+                </div>
+                <div class="text-center">
+                    <p class="stat-num text-2xl font-bold">
+                        <span class="text-blue-400">{{ full_stats.wins }}W</span>
+                        <span class="text-gray-700 mx-1">/</span>
+                        <span class="text-red-400">{{ full_stats.losses }}L</span>
+                    </p>
+                    <p class="text-xs text-gray-500 mt-0.5">Record</p>
+                </div>
+                {% if streaks.current > 0 %}
+                <div class="text-center">
+                    <p class="stat-num text-2xl font-bold {% if streaks.current_type == 'win' %}text-green-400{% else %}text-red-400{% endif %}">{{ streaks.current }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ "Win" if streaks.current_type == "win" else "Loss" }} streak</p>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<main class="max-w-6xl mx-auto px-6 py-5">
+
+    <!-- FETCHING BANNER -->
+    <div id="fetchingBanner" style="display:none;background:#1A1D24;border:1px solid #C89B3C44;border-radius:8px;padding:10px 16px;margin-bottom:16px;" class="flex items-center gap-3">
+        <div style="width:8px;height:8px;border-radius:50%;background:#C89B3C;animation:pulse 1s ease-in-out infinite;flex-shrink:0;"></div>
+        <span class="text-sm text-gray-400">Fetching remaining games in background... <span id="fetchProgress" style="color:#C89B3C;font-weight:700;"></span></span>
+    </div>
+    <div id="fetchDoneBanner" style="display:none;background:#1A1D24;border:1px solid #4ADE8044;border-radius:8px;padding:10px 16px;margin-bottom:16px;" class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+            <span style="color:#4ADE80;">✓</span>
+            <span id="fetchDoneText" class="text-sm text-gray-400"></span>
+        </div>
+        <button onclick="window.location.reload()" class="text-xs font-bold px-3 py-1 rounded" style="background:#4ADE8022;border:1px solid #4ADE8044;color:#4ADE80;">
+            Refresh page
+        </button>
+    </div>
+    <style>@keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }</style>
+
+    <!-- RECOMMENDATION BANNER -->
+    {% if recommendation %}
+    <div class="rec-banner rec-{{ recommendation.type }} mb-5 fade-up-2">
+        <span class="text-xl shrink-0">
+            {% if recommendation.type == 'ap' %}🔮
+            {% elif recommendation.type == 'ad' %}⚔️
+            {% else %}⚖️{% endif %}
+        </span>
+        <div class="flex-1">
+            <p class="text-sm font-medium text-gray-200">{{ recommendation.message }}</p>
+        </div>
+        {% if recommendation.badge is defined %}
+        <span class="shrink-0 text-xs font-bold px-3 py-1 rounded-full
+            {% if recommendation.type == 'ap' %}text-purple-300" style="background:#4C1D95;"
+            {% elif recommendation.type == 'ad' %}text-orange-300" style="background:#7C2D12;"
+            {% else %}text-blue-300" style="background:#1E3A5F;"{% endif %}>
+            {{ recommendation.badge }}
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- FILTERS -->
+    <div class="flex items-center gap-2 mb-5 flex-wrap fade-up-2">
+        <span class="text-gray-600 text-xs font-semibold uppercase tracking-wider mr-1">Build</span>
+        {% for val, label in [('all','All'),('ap','AP'),('ad','AD')] %}
+        <a href="?build={{ val }}&position={{ active_position }}&side={{ active_side }}" class="filter-tab {% if active_build == val %}active{% endif %}">{{ label }}</a>
+        {% endfor %}
+        <div class="w-px h-4 bg-gray-800 mx-1"></div>
+        <span class="text-gray-600 text-xs font-semibold uppercase tracking-wider mr-1">Role</span>
+        {% for val, label in [('all','All'),('jungle','Jungle'),('support','Support')] %}
+        <a href="?build={{ active_build }}&position={{ val }}&side={{ active_side }}" class="filter-tab {% if active_position == val %}active{% endif %}">{{ label }}</a>
+        {% endfor %}
+        <div class="w-px h-4 bg-gray-800 mx-1"></div>
+        <span class="text-gray-600 text-xs font-semibold uppercase tracking-wider mr-1">Side</span>
+        {% for val, label in [('all','All'),('blue','Blue'),('red','Red')] %}
+        <a href="?build={{ active_build }}&position={{ active_position }}&side={{ val }}" class="filter-tab {% if active_side == val %}active{% endif %}">{{ label }}</a>
+        {% endfor %}
+        {% if active_build != 'all' or active_position != 'all' or active_side != 'all' %}
+        <a href="?" class="filter-tab ml-1" style="color:#D94A4A;border-color:#D94A4A44;">✕ Clear</a>
+        {% endif %}
+        <span class="text-gray-600 text-xs ml-auto">{{ stats.total_games }} games shown</span>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="grid grid-cols-12 gap-4 fade-up-3">
+
+        <!-- LEFT SIDEBAR -->
+        <div class="col-span-4 flex flex-col gap-4">
+
+            <!-- Overview + Recent Form -->
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview</h3>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">Winrate</p>
+                        <p class="stat-num text-3xl font-bold {% if stats.winrate >= 55 %}text-green-400{% elif stats.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ stats.winrate }}%</p>
+                        <p class="text-xs text-gray-600 mt-0.5">{{ stats.wins }}W {{ stats.losses }}L</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">KDA</p>
+                        <p class="stat-num text-3xl font-bold text-blue-400">{{ stats.kda.ratio }}</p>
+                        <p class="mono text-xs text-gray-600 mt-0.5">{{ stats.kda.kills }}/{{ stats.kda.deaths }}/{{ stats.kda.assists }}</p>
+                    </div>
+                </div>
+                <div class="wr-bar-bg mb-4">
+                    <div class="wr-bar {% if stats.winrate >= 55 %}bg-green-500{% elif stats.winrate >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" style="width:{{ stats.winrate }}%"></div>
+                </div>
+                <div class="border-t border-gray-800 pt-3">
+                    <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Recent Form</p>
+                    <div class="flex gap-2">
+                        {% for label, key in [('L10','last10'),('L20','last20'),('L50','last50')] %}
+                        {% set f = recent_form[key] %}
+                        {% if f %}
+                        <div class="flex-1 text-center p-2 rounded" style="background:#1A1D24;">
+                            <p class="text-xs text-gray-500 mb-0.5">{{ label }}</p>
+                            <p class="stat-num font-bold text-sm {% if f.winrate >= 55 %}text-green-400{% elif f.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ f.winrate }}%</p>
+                            <p class="text-xs text-gray-700">{{ f.wins }}W/{{ f.games - f.wins }}L</p>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rank Card -->
+            {% if rank_info %}
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Ranked Solo/Duo</h3>
+                <div class="flex items-center gap-3">
+                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/ranked-emblem/emblem-{{ rank_info.tier | lower }}.png"
+                         style="width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 0 10px {{ {'iron':'#8B7355','bronze':'#CD7F32','silver':'#A8A9AD','gold':'#C89B3C','platinum':'#00B4D8','emerald':'#50C878','diamond':'#A6C4E0','master':'#9B59B6','grandmaster':'#E74C3C','challenger':'#F1C40F'}[rank_info.tier | lower] | default('#C89B3C') }}66);"
+                         onerror="this.style.display='none'" alt="{{ rank_info.tier }}" class="shrink-0">
+                    <div class="flex-1">
+                        <p class="font-bold text-xl leading-tight tier-{{ rank_info.tier | lower }}">{{ rank_info.tier }} {{ rank_info.rank }}</p>
+                        <p class="text-sm font-semibold text-gray-400 mt-0.5">{{ rank_info.lp }} LP</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="text-xs text-gray-500">{{ rank_info.wins }}V {{ rank_info.losses }}D</span>
+                            <span class="text-gray-700">·</span>
+                            <span class="text-xs font-bold {% if rank_info.winrate >= 55 %}text-green-400{% elif rank_info.winrate >= 50 %}text-yellow-400{% else %}text-red-400{% endif %}">{{ rank_info.winrate }}% WR</span>
+                        </div>
+                        <div class="wr-bar-bg mt-2">
+                            <div class="wr-bar {% if rank_info.winrate >= 55 %}bg-green-500{% elif rank_info.winrate >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" style="width:{{ rank_info.winrate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Streaks -->
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Streaks</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="text-center p-3 rounded" style="background:#1A1D24;">
+                        <p class="text-xs text-gray-500 mb-1">Current</p>
+                        <p class="stat-num text-2xl font-bold {% if streaks.current_type == 'win' %}text-green-400{% else %}text-red-400{% endif %}">{{ streaks.current }}</p>
+                        <p class="text-xs mt-0.5 {% if streaks.current_type == 'win' %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ streaks.current_type | upper if streaks.current_type else '–' }} streak
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="text-center p-2 rounded" style="background:#1A1D24;">
+                            <p class="text-xs text-gray-500">Best win streak</p>
+                            <p class="stat-num text-xl font-bold text-green-400">{{ streaks.best_win }}</p>
+                        </div>
+                        <div class="text-center p-2 rounded" style="background:#1A1D24;">
+                            <p class="text-xs text-gray-500">Worst loss streak</p>
+                            <p class="stat-num text-xl font-bold text-red-400">{{ streaks.best_loss }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shaco Highlights -->
+            {% if stats %}
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Highlights</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <!-- Objectives Stolen -->
+                    <div class="highlight-card col-span-2" style="background:linear-gradient(135deg,#1A1030,#13101E);border-color:#9333EA44;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-purple-400 font-semibold uppercase tracking-wider">Objectives Stolen</p>
+                                <p class="stat-num text-3xl font-black text-purple-300 mt-0.5">{{ stats.objectives_stolen }}</p>
+                                <p class="text-xs text-gray-600 mt-1">in {{ stats.total_games }} games</p>
+                            </div>
+                            <div class="text-4xl opacity-60">🎯</div>
+                        </div>
+                    </div>
+                    <!-- First Blood -->
+                    <div class="highlight-card" style="background:linear-gradient(135deg,#1A1200,#13110A);border-color:#F59E0B44;">
+                        <p class="text-3xl font-black text-yellow-400">{{ stats.first_blood_pct }}%</p>
+                        <p class="text-xs text-gray-500 mt-1">First Blood</p>
+                        <p class="text-xs text-gray-700">{{ stats.first_blood_count }}x</p>
+                    </div>
+                    <!-- Surrenders -->
+                    <div class="highlight-card">
+                        <p class="text-3xl font-black text-gray-400">{{ stats.surrendered_pct }}%</p>
+                        <p class="text-xs text-gray-500 mt-1">Surrenders</p>
+                    </div>
+                    <!-- Multi-kills -->
+                    <div class="highlight-card col-span-2">
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Multi-kills</p>
+                        <div class="flex justify-around">
+                            <div>
+                                <p class="stat-num text-xl font-bold text-gray-300">{{ stats.doubles }}</p>
+                                <p class="text-xs text-gray-600">Doubles</p>
+                            </div>
+                            <div>
+                                <p class="stat-num text-xl font-bold text-green-400">{{ stats.triples }}</p>
+                                <p class="text-xs text-gray-600">Triples</p>
+                            </div>
+                            <div>
+                                <p class="stat-num text-xl font-bold text-blue-400">{{ stats.quadras }}</p>
+                                <p class="text-xs text-gray-600">Quadras</p>
+                            </div>
+                            <div>
+                                <p class="stat-num text-xl font-bold text-red-400">{{ stats.pentas }}</p>
+                                <p class="text-xs text-gray-600">Pentas</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Extra stats pills -->
+                <div class="flex flex-wrap gap-1.5 mt-3">
+                    <span class="stat-pill text-gray-400">👁 {{ stats.avg_vision }} vision avg</span>
+                    <span class="stat-pill text-gray-400">⚰️ {{ stats.avg_time_dead_min }}m dead avg</span>
+                    <span class="stat-pill text-gray-400">Lv {{ stats.avg_champ_level }} avg</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Summoner Spells Usage -->
+            {% if stats and stats.top_spells %}
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Summoner Spells más usados</h3>
+                <div class="flex flex-col gap-2">
+                    {% for spell_id, count in stats.top_spells %}
+                    {% set sp = spell_icons.get(spell_id) if spell_icons else None %}
+                    {% if sp %}
+                    <div class="flex items-center gap-2">
+                        <img src="{{ sp.icon }}" class="spell-icon shrink-0" alt="{{ sp.name }}" onerror="this.style.display='none'">
+                        <span class="text-xs text-gray-300 flex-1">{{ sp.name }}</span>
+                        <span class="text-xs text-gray-500">{{ count }}x</span>
+                        <div class="wr-bar-bg flex-1" style="max-width:60px;">
+                            <div class="wr-bar bg-blue-600" style="width:{{ [count * 100 // stats.total_games, 100] | min }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- AP vs AD Deep Dive -->
+            {% if build_comp.ap or build_comp.ad %}
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">AP vs AD Deep Dive</h3>
+                <div class="flex gap-2">
+
+                    <!-- AP Column -->
+                    <div class="build-col build-col-ap">
+                        <div class="flex items-center gap-1.5 mb-2">
+                            <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+                            <span class="text-xs font-bold text-purple-300">AP Shaco</span>
+                        </div>
+                        {% if build_comp.ap %}
+                        {% set ap = build_comp.ap %}
+                        <p class="stat-num text-2xl font-bold mb-1 {% if ap.winrate >= 55 %}text-green-400{% elif ap.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ ap.winrate }}%</p>
+                        <p class="text-xs text-gray-600 mb-3">{{ ap.wins }}W / {{ ap.losses }}L · {{ ap.games }}g</p>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">KDA</span>
+                            <span class="mono text-xs font-bold text-blue-400">{{ ap.avg_kda }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">K/D/A</span>
+                            <span class="mono text-xs text-gray-400">{{ ap.avg_kills }}/{{ ap.avg_deaths }}/{{ ap.avg_assists }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">Damage</span>
+                            <span class="text-xs font-semibold text-gray-300">{{ "{:,}".format(ap.avg_damage) }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">Avg CS</span>
+                            <span class="text-xs font-semibold accent">{{ ap.avg_cs }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">Avg dur.</span>
+                            <span class="text-xs text-gray-400">{{ ap.avg_duration }}m</span>
+                        </div>
+                        {% if ap.top_items %}
+                        <p class="text-xs text-gray-600 mt-2 mb-1">Common items</p>
+                        <div class="flex flex-wrap gap-0.5">
+                            {% for item_id in ap.top_items %}
+                            <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item_id }}.png"
+                                 class="item-icon" onerror="this.style.display='none'" alt="">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-xs text-gray-600">No data</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- AD Column -->
+                    <div class="build-col build-col-ad">
+                        <div class="flex items-center gap-1.5 mb-2">
+                            <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <span class="text-xs font-bold text-orange-300">AD Shaco</span>
+                        </div>
+                        {% if build_comp.ad %}
+                        {% set ad = build_comp.ad %}
+                        <p class="stat-num text-2xl font-bold mb-1 {% if ad.winrate >= 55 %}text-green-400{% elif ad.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ ad.winrate }}%</p>
+                        <p class="text-xs text-gray-600 mb-3">{{ ad.wins }}W / {{ ad.losses }}L · {{ ad.games }}g</p>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">KDA</span>
+                            <span class="mono text-xs font-bold text-blue-400">{{ ad.avg_kda }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">K/D/A</span>
+                            <span class="mono text-xs text-gray-400">{{ ad.avg_kills }}/{{ ad.avg_deaths }}/{{ ad.avg_assists }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">Damage</span>
+                            <span class="text-xs font-semibold text-gray-300">{{ "{:,}".format(ad.avg_damage) }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">Avg CS</span>
+                            <span class="text-xs font-semibold accent">{{ ad.avg_cs }}</span>
+                        </div>
+                        <div class="build-stat-row">
+                            <span class="text-xs text-gray-500">Avg dur.</span>
+                            <span class="text-xs text-gray-400">{{ ad.avg_duration }}m</span>
+                        </div>
+                        {% if ad.top_items %}
+                        <p class="text-xs text-gray-600 mt-2 mb-1">Common items</p>
+                        <div class="flex flex-wrap gap-0.5">
+                            {% for item_id in ad.top_items %}
+                            <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item_id }}.png"
+                                 class="item-icon" onerror="this.style.display='none'" alt="">
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p class="text-xs text-gray-600">No data</p>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Playstyle Insights / Best Conditions -->
+            {% if best_conditions %}
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Playstyle Insights</h3>
+                <p class="text-xs text-gray-400 mb-3 leading-relaxed" style="border-left:2px solid #C89B3C44; padding-left:8px;">
+                    {{ best_conditions.insight }}
+                </p>
+                {% for cond in best_conditions.conditions %}
+                <div class="mb-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-gray-400">{{ cond.label }}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-gray-600">{{ cond.games }}g</span>
+                            <span class="stat-num text-xs font-bold {% if cond.winrate >= 55 %}text-green-400{% elif cond.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ cond.winrate }}%</span>
+                        </div>
+                    </div>
+                    <div class="wr-bar-bg">
+                        <div class="condition-bar {% if cond.winrate >= 55 %}bg-green-500{% elif cond.winrate >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" style="width:{{ cond.winrate }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Build Split -->
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Build Split</h3>
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+                            <span class="text-sm font-semibold text-purple-300">AP Shaco</span>
+                            <span class="text-xs text-gray-600">{{ stats.ap.games }}g</span>
+                        </div>
+                        <span class="stat-num font-bold text-sm {% if stats.ap.winrate >= 55 %}text-green-400{% elif stats.ap.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ stats.ap.winrate }}%</span>
+                    </div>
+                    <div class="wr-bar-bg"><div class="wr-bar bg-purple-500" style="width:{{ stats.ap.winrate }}%"></div></div>
+                    <p class="text-xs text-gray-600 mt-1">{{ stats.ap.wins }}W / {{ stats.ap.games - stats.ap.wins }}L</p>
+                </div>
+                {% if stats.ad.games > 0 %}
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <span class="text-sm font-semibold text-orange-300">AD Shaco</span>
+                            <span class="text-xs text-gray-600">{{ stats.ad.games }}g</span>
+                        </div>
+                        <span class="stat-num font-bold text-sm {% if stats.ad.winrate >= 55 %}text-green-400{% elif stats.ad.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ stats.ad.winrate }}%</span>
+                    </div>
+                    <div class="wr-bar-bg"><div class="wr-bar bg-orange-500" style="width:{{ stats.ad.winrate }}%"></div></div>
+                    <p class="text-xs text-gray-600 mt-1">{{ stats.ad.wins }}W / {{ stats.ad.games - stats.ad.wins }}L</p>
+                </div>
+                {% else %}
+                <div class="flex items-center gap-2 opacity-40">
+                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                    <span class="text-sm text-orange-300">AD Shaco</span>
+                    <span class="text-xs text-gray-600 ml-1">No data</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Side & Duration -->
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Side & Duration</h3>
+                {% if stats.by_side.blue.games > 0 %}
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-gray-400">🟦 Blue side <span class="text-gray-600">{{ stats.by_side.blue.games }}g</span></span>
+                        <span class="stat-num text-xs font-bold {% if stats.by_side.blue.winrate >= 55 %}text-green-400{% elif stats.by_side.blue.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ stats.by_side.blue.winrate }}%</span>
+                    </div>
+                    <div class="wr-bar-bg"><div class="wr-bar bg-blue-500" style="width:{{ stats.by_side.blue.winrate }}%"></div></div>
+                </div>
+                {% endif %}
+                {% if stats.by_side.red.games > 0 %}
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-gray-400">🟥 Red side <span class="text-gray-600">{{ stats.by_side.red.games }}g</span></span>
+                        <span class="stat-num text-xs font-bold {% if stats.by_side.red.winrate >= 55 %}text-green-400{% elif stats.by_side.red.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ stats.by_side.red.winrate }}%</span>
+                    </div>
+                    <div class="wr-bar-bg"><div class="wr-bar bg-red-500" style="width:{{ stats.by_side.red.winrate }}%"></div></div>
+                </div>
+                {% endif %}
+                <div class="border-t border-gray-800 my-3"></div>
+                {% for key, d in stats.by_duration.items() %}
+                {% if d.games > 0 %}
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-gray-400">⏱ {{ d.label }} <span class="text-gray-600">{{ d.games }}g</span></span>
+                        <span class="stat-num text-xs font-bold {% if d.winrate >= 55 %}text-green-400{% elif d.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ d.winrate }}%</span>
+                    </div>
+                    <div class="wr-bar-bg"><div class="wr-bar {% if d.winrate >= 55 %}bg-green-500{% elif d.winrate >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" style="width:{{ d.winrate }}%"></div></div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Most Played With -->
+            {% if most_with %}
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Most Played With <span class="text-gray-700 font-normal normal-case">(≥3 games)</span></h3>
+                {% for a in most_with %}
+                <div class="matchup-row flex items-center gap-2 px-2 py-1.5 mb-0.5">
+                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ a.champ }}.png"
+                         class="w-7 h-7 rounded-full" style="border:1px solid #2A2D35;"
+                         onerror="this.style.display='none'" alt="{{ a.champ }}">
+                    <span class="text-xs text-gray-300 flex-1">{{ a.champ }}</span>
+                    <span class="mono text-xs text-gray-600">{{ a.total }}g</span>
+                    <span class="stat-num text-xs font-bold w-10 text-right {% if a.winrate >= 55 %}text-green-400{% elif a.winrate >= 50 %}accent{% else %}text-red-400{% endif %}">{{ a.winrate }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Matchups -->
+            <div class="card p-4">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Matchups <span class="text-gray-700 font-normal normal-case">(≥3 games)</span></h3>
+                {% if stats.best_matchups %}
+                <p class="text-xs font-semibold text-green-500 mb-2 uppercase tracking-wider">Best</p>
+                {% for m in stats.best_matchups %}
+                <div class="matchup-row flex items-center gap-2 px-2 py-1.5 mb-0.5">
+                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ m.champ }}.png" class="w-7 h-7 rounded-full" style="border:1px solid #2A2D35;" onerror="this.style.display='none'" alt="{{ m.champ }}">
+                    <span class="text-xs text-gray-300 flex-1">{{ m.champ }}</span>
+                    <span class="mono text-xs text-gray-600">{{ m.wins }}W/{{ m.total - m.wins }}L</span>
+                    <span class="stat-num text-xs font-bold text-green-400 w-10 text-right">{{ m.winrate }}%</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% if stats.worst_matchups %}
+                <p class="text-xs font-semibold text-red-500 mt-3 mb-2 uppercase tracking-wider">Worst</p>
+                {% for m in stats.worst_matchups %}
+                <div class="matchup-row flex items-center gap-2 px-2 py-1.5 mb-0.5">
+                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ m.champ }}.png" class="w-7 h-7 rounded-full" style="border:1px solid #2A2D35;" onerror="this.style.display='none'" alt="{{ m.champ }}">
+                    <span class="text-xs text-gray-300 flex-1">{{ m.champ }}</span>
+                    <span class="mono text-xs text-gray-600">{{ m.wins }}W/{{ m.total - m.wins }}L</span>
+                    <span class="stat-num text-xs font-bold text-red-400 w-10 text-right">{{ m.winrate }}%</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% if not stats.best_matchups and not stats.worst_matchups %}
+                <p class="text-xs text-gray-600">Not enough data yet.</p>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- RIGHT: Match History -->
+        <div class="col-span-8">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Match History</h3>
+            </div>
+            <div class="flex flex-col gap-2">
+
+                {% for match in recent_matches %}
+                {% if match.duration_min > 4 %}
+                <div class="match-card {% if match.win %}match-win{% else %}match-loss{% endif %} cursor-pointer" onclick="toggleMatch('{{ match.match_id }}')">
+
+                    <div class="match-row flex items-center">
+
+                        <!-- COL 1: Queue + Result + Time -->
+                        <div class="flex flex-col justify-center shrink-0 px-4 py-3" style="width:96px;">
+                            {% set qt = match.queue_type | default('ranked_solo') %}
+                            {% if qt == 'ranked_solo' %}
+                            <span class="queue-badge queue-solo" style="text-align:center;">Solo/Duo</span>
+                            {% elif qt == 'ranked_flex' %}
+                            <span class="queue-badge queue-flex" style="text-align:center;">Flex 5v5</span>
+                            {% elif qt == 'aram' %}
+                            <span class="queue-badge queue-aram" style="text-align:center;">ARAM</span>
+                            {% else %}
+                            <span class="queue-badge queue-other" style="text-align:center;">Normal</span>
+                            {% endif %}
+                            <p class="text-sm font-extrabold mt-2 {% if match.win %}text-blue-400{% else %}text-red-400{% endif %}">{{ "Victory" if match.win else "Defeat" }}</p>
+                            <p class="text-xs text-gray-600 mt-1.5 leading-tight"><span class="time-ago" data-ts="{{ match.game_timestamp }}"></span></p>
+                            <p class="text-xs text-gray-700">{{ match.duration_min }}m</p>
+                            <!-- Badges -->
+                            <div class="flex flex-wrap gap-0.5 mt-1.5">
+                                {% if match.objectives_stolen and match.objectives_stolen > 0 %}
+                                <span class="badge-stolen">🎯 {{ match.objectives_stolen }} rob.</span>
+                                {% endif %}
+                                {% if match.first_blood %}
+                                <span class="badge-fb">⚡ FB</span>
+                                {% endif %}
+                                {% if match.penta_kills and match.penta_kills > 0 %}
+                                <span class="badge-penta">PENTA</span>
+                                {% elif match.quadra_kills and match.quadra_kills > 0 %}
+                                <span class="badge-multi">QUADRA</span>
+                                {% elif match.triple_kills and match.triple_kills > 0 %}
+                                <span class="badge-multi">TRIPLE</span>
+                                {% elif match.double_kills and match.double_kills > 0 %}
+                                <span class="badge-multi">DOBLE</span>
+                                {% endif %}
+                                {% if match.surrendered %}
+                                <span class="badge-surr">FF</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-sep"></div>
+
+                        <!-- COL 2: Champ icon + summoner spells + badges -->
+                        <div class="flex items-center justify-center shrink-0 px-2 py-3 gap-1.5" style="width:76px;">
+                            <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/Shaco.png"
+                                 class="w-11 h-11 rounded-lg shrink-0"
+                                 style="border:2px solid {% if match.win %}#4A90D977{% else %}#D94A4A77{% endif %};" alt="Shaco">
+                            <div class="flex flex-col gap-1">
+                                <!-- Summoner spells -->
+                                {% if match.summoner1_id and spell_icons %}
+                                    {% set s1 = spell_icons.get(match.summoner1_id) %}
+                                    {% set s2 = spell_icons.get(match.summoner2_id) %}
+                                    {% if s1 %}<img src="{{ s1.icon }}" class="spell-icon-sm" title="{{ s1.name }}" onerror="this.style.display='none'" alt="">{% else %}<div style="width:18px;height:18px;background:#1A1D24;border-radius:3px;"></div>{% endif %}
+                                    {% if s2 %}<img src="{{ s2.icon }}" class="spell-icon-sm" title="{{ s2.name }}" onerror="this.style.display='none'" alt="">{% else %}<div style="width:18px;height:18px;background:#1A1D24;border-radius:3px;"></div>{% endif %}
+                                {% else %}
+                                <div class="flex flex-col gap-0.5 mt-1.5">
+                                    <span class="text-xs rounded px-1 font-bold
+                                        {% if match.build == 'AP' %}text-purple-400" style="background:#2D1B4E;font-size:10px;"
+                                        {% elif match.build == 'AD' %}text-orange-400" style="background:#3D2010;font-size:10px;"
+                                        {% else %}text-gray-500" style="background:#1E2128;font-size:10px;"{% endif %}>{{ match.build }}</span>
+                                    <span class="text-xs rounded px-1 font-bold text-gray-500" style="background:#1E2128;font-size:10px;">{{ "JG" if match.position == "JUNGLE" else "SUP" }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- COL 3: KDA + CS + vision + time dead -->
+                        <div class="flex flex-col justify-center shrink-0 px-3 py-3" style="width:96px;">
+                            <p class="mono font-bold text-center" style="font-size:14px;letter-spacing:-0.5px;">
+                                <span class="text-gray-100">{{ match.kills }}</span><span class="text-gray-600"> / </span><span class="text-red-400">{{ match.deaths }}</span><span class="text-gray-600"> / </span><span class="text-gray-100">{{ match.assists }}</span>
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1 text-center">{{ match.cs }} CS · Lv{{ match.champ_level }}</p>
+                            <div class="flex items-center justify-center gap-2 mt-1">
+                                {% if match.vision_score %}
+                                <span class="text-xs text-gray-600" title="Vision Score">👁 {{ match.vision_score }}</span>
+                                {% endif %}
+                                <span class="text-xs {% if match.side == 'blue' %}text-blue-500{% else %}text-red-500{% endif %}">{{ match.side | capitalize }}</span>
+                            </div>
+                        </div>
+
+                        <div class="col-sep"></div>
+
+                        <!-- COL 4: Keystone + Items 2x3 -->
+                        <div class="flex items-center gap-2 shrink-0 px-3 py-3">
+                            <!-- Keystone rune -->
+                            {% if match.participants %}
+                                {% set me = match.participants | selectattr('is_me') | first | default(None) %}
+                                {% if me and me.keystone_id and perk_icons %}
+                                    {% set ks_url = perk_icons.get(me.keystone_id) %}
+                                    {% if ks_url %}
+                                    <img src="{{ ks_url }}"
+                                         class="keystone-icon shrink-0" title="Keystone" onerror="this.style.opacity='0'" alt="">
+                                    {% else %}
+                                    <div class="keystone-icon shrink-0"></div>
+                                    {% endif %}
+                                {% else %}
+                                <div class="keystone-icon shrink-0"></div>
+                                {% endif %}
+                            {% else %}
+                            <div class="keystone-icon shrink-0"></div>
+                            {% endif %}
+                            <!-- Items 2x3 -->
+                            <div class="flex flex-col gap-0.5">
+                                <div class="flex gap-0.5">
+                                    {% for item_id in match.own_items[:3] %}
+                                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item_id }}.png"
+                                         class="item-icon" style="width:24px;height:24px;" onerror="this.style.display='none'" alt="">
+                                    {% endfor %}
+                                    {% for i in range(3 - match.own_items[:3]|length) %}
+                                    <div class="item-empty" style="width:24px;height:24px;"></div>
+                                    {% endfor %}
+                                </div>
+                                <div class="flex gap-0.5">
+                                    {% for item_id in match.own_items[3:6] %}
+                                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item_id }}.png"
+                                         class="item-icon" style="width:24px;height:24px;" onerror="this.style.display='none'" alt="">
+                                    {% endfor %}
+                                    {% for i in range(3 - match.own_items[3:6]|length) %}
+                                    <div class="item-empty" style="width:24px;height:24px;"></div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-sep"></div>
+
+                        <!-- COL 5: Players (compact, right side) -->
+                        <div class="flex items-stretch flex-1 min-w-0 px-2 py-1 gap-1">
+                            {% if match.participants %}
+                                {% set blue_team = match.participants | selectattr('team','equalto','blue') | list %}
+                                {% set red_team  = match.participants | selectattr('team','equalto','red')  | list %}
+                                <div class="flex flex-col justify-center gap-px" style="flex:1;min-width:0;">
+                                    {% for p in blue_team %}
+                                    <div class="flex items-center gap-1">
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ p.champion }}.png"
+                                             style="width:16px;height:16px;border-radius:3px;flex-shrink:0;" onerror="this.style.display='none'" alt="">
+                                        <span class="player-name {% if p.is_me %}is-me{% endif %}" title="{{ p.champion }}">{% if p.is_me %}<strong>{{ p.name if p.name else p.champion }}</strong>{% else %}{{ p.name if p.name else p.champion }}{% endif %}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="vs-divider"></div>
+                                <div class="flex flex-col justify-center gap-px" style="flex:1;min-width:0;">
+                                    {% for p in red_team %}
+                                    <div class="flex items-center gap-1">
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ p.champion }}.png"
+                                             style="width:16px;height:16px;border-radius:3px;flex-shrink:0;" onerror="this.style.display='none'" alt="">
+                                        <span class="player-name {% if p.is_me %}is-me{% endif %}" title="{{ p.champion }}">{% if p.is_me %}<strong>{{ p.name if p.name else p.champion }}</strong>{% else %}{{ p.name if p.name else p.champion }}{% endif %}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="flex flex-col justify-center gap-px" style="flex:1;min-width:0;">
+                                    {% for champ in match.ally_champs %}
+                                    <div class="flex items-center gap-1">
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ champ }}.png"
+                                             style="width:16px;height:16px;border-radius:3px;flex-shrink:0;" onerror="this.style.display='none'" alt="">
+                                        <span class="player-name">{{ champ }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="vs-divider"></div>
+                                <div class="flex flex-col justify-center gap-px" style="flex:1;min-width:0;">
+                                    {% for champ in match.enemy_champs %}
+                                    <div class="flex items-center gap-1">
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ champ }}.png"
+                                             style="width:16px;height:16px;border-radius:3px;flex-shrink:0;" onerror="this.style.display='none'" alt="">
+                                        <span class="player-name">{{ champ }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Expand arrow -->
+                        <div id="arrow-{{ match.match_id }}" class="text-gray-700 text-xs shrink-0 px-3 transition-transform duration-200">▼</div>
+                    </div>
+
+                    <div id="detail-{{ match.match_id }}" class="hidden detail-panel px-4 py-3">
+
+                        <!-- Bans row -->
+                        {% if match.bans_json %}
+                        {% set bans = match.bans_json | from_json %}
+                        {% if bans %}
+                        <div class="flex items-center gap-2 mb-3 pb-2" style="border-bottom:1px solid #1E2128;">
+                            <span class="text-xs text-gray-600 uppercase tracking-wider shrink-0">Bans</span>
+                            <div class="flex gap-1 flex-wrap">
+                                {% for ban in bans %}
+                                {% if ban.champ_id and ban.champ_id > 0 %}
+                                <div class="relative" title="Banned">
+                                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{{ ban.champ_id }}.png"
+                                         style="width:20px;height:20px;border-radius:3px;opacity:0.7;filter:grayscale(60%);"
+                                         onerror="this.style.display='none'" alt="">
+                                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                                        <span style="font-size:12px;line-height:1;color:#EF4444;font-weight:900;text-shadow:0 0 4px #000;">✕</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if match.participants %}
+                        {# Macro: rune path icon from style ID #}
+                        {% macro rune_path_icon(style_id) %}
+                            {% if style_id == 8000 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/ranked-crest/wings/wings_precision.png" class="rune-icon" title="Precision" onerror="this.style.display='none'">
+                            {% elif style_id == 8100 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png" class="rune-icon" title="Domination" onerror="this.style.display='none'">
+                            {% elif style_id == 8200 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7201_sorcery.png" class="rune-icon" title="Sorcery" onerror="this.style.display='none'">
+                            {% elif style_id == 8300 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7203_whimsy.png" class="rune-icon" title="Inspiration" onerror="this.style.display='none'">
+                            {% elif style_id == 8400 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7204_resolve.png" class="rune-icon" title="Resolve" onerror="this.style.display='none'">
+                            {% endif %}
+                        {% endmacro %}
+                        {# Macro: keystone icon #}
+                        {% macro keystone_icon(keystone_id) %}
+                            {% if keystone_id %}
+                            <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/{{ keystone_id }}.png"
+                                 class="rune-icon" title="{{ keystone_id }}" onerror="this.style.background='#1E2128';this.style.display='inline-block';">
+                            {% endif %}
+                        {% endmacro %}
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <p class="text-xs font-semibold text-blue-400 mb-2 uppercase tracking-wider">🟦 Blue Team</p>
+                                {% for p in match.participants %}{% if p.team == 'blue' %}
+                                <div class="team-row {% if p.is_me %}is-me{% endif %} mb-1">
+                                    <!-- Champ icon -->
+                                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ p.champion }}.png"
+                                         class="w-6 h-6 rounded-full shrink-0" style="border:1px solid #4A90D944;" onerror="this.style.display='none'" alt="">
+                                    <!-- Name + KDA -->
+                                    <div class="shrink-0" style="width:88px;">
+                                        <p class="text-xs {% if p.is_me %}accent font-bold{% else %}text-gray-300{% endif %} leading-tight truncate">{{ p.champion }}</p>
+                                        <p class="mono text-xs text-gray-600 leading-tight">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</p>
+                                    </div>
+                                    <!-- Keystone + secondary path rune icons -->
+                                    <div class="flex flex-col gap-0.5 shrink-0">
+                                        {% if p.keystone_id is defined and p.keystone_id %}
+                                        <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/{{ p.keystone_id }}.png"
+                                             class="rune-icon" title="Keystone" onerror="this.style.display='none'">
+                                        {% elif p.primary_path is defined and p.primary_path %}
+                                            {% if p.primary_path == 8000 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_precision.png" class="rune-icon" title="Precision" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8100 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png" class="rune-icon" title="Domination" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8200 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7201_sorcery.png" class="rune-icon" title="Sorcery" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8300 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7203_whimsy.png" class="rune-icon" title="Inspiration" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8400 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7204_resolve.png" class="rune-icon" title="Resolve" onerror="this.style.display='none'">
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if p.secondary_path is defined and p.secondary_path %}
+                                            {% if p.secondary_path == 8000 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_precision.png" class="rune-icon" title="Precision (sec)" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8100 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png" class="rune-icon" title="Domination (sec)" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8200 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7201_sorcery.png" class="rune-icon" title="Sorcery (sec)" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8300 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7203_whimsy.png" class="rune-icon" title="Inspiration (sec)" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8400 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7204_resolve.png" class="rune-icon" title="Resolve (sec)" onerror="this.style.display='none'">
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <!-- 6 items + trinket -->
+                                    <div class="flex items-center gap-0.5 ml-auto">
+                                        {% for item_id in (p.slots if p.slots is defined else p.item_ids if p.item_ids is defined else [])[:6] %}
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item_id }}.png"
+                                             class="item-icon-sm" onerror="this.style.display='none'" alt="">
+                                        {% endfor %}
+                                        {% for i in range(6 - ((p.slots if p.slots is defined else p.item_ids if p.item_ids is defined else [])|length)) %}
+                                        <div style="width:20px;height:20px;border-radius:3px;background:#1A1D24;border:1px solid #2A2D35;"></div>
+                                        {% endfor %}
+                                        <div class="trinket-sep"></div>
+                                        {% if p.trinket is defined and p.trinket %}
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ p.trinket }}.png"
+                                             class="trinket-icon" title="Trinket" onerror="this.style.display='none'" alt="">
+                                        {% else %}
+                                        <div style="width:20px;height:20px;border-radius:3px;background:#1A1D24;border:1px solid #C89B3C22;"></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}{% endfor %}
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-red-400 mb-2 uppercase tracking-wider">🟥 Red Team</p>
+                                {% for p in match.participants %}{% if p.team == 'red' %}
+                                <div class="team-row {% if p.is_me %}is-me{% endif %} mb-1">
+                                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ p.champion }}.png"
+                                         class="w-6 h-6 rounded-full shrink-0" style="border:1px solid #D94A4A44;" onerror="this.style.display='none'" alt="">
+                                    <div class="shrink-0" style="width:88px;">
+                                        <p class="text-xs {% if p.is_me %}accent font-bold{% else %}text-gray-300{% endif %} leading-tight truncate">{{ p.champion }}</p>
+                                        <p class="mono text-xs text-gray-600 leading-tight">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</p>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5 shrink-0">
+                                        {% if p.keystone_id is defined and p.keystone_id %}
+                                        <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/{{ p.keystone_id }}.png"
+                                             class="rune-icon" title="Keystone" onerror="this.style.display='none'">
+                                        {% elif p.primary_path is defined and p.primary_path %}
+                                            {% if p.primary_path == 8000 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_precision.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8100 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8200 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7201_sorcery.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8300 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7203_whimsy.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.primary_path == 8400 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7204_resolve.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if p.secondary_path is defined and p.secondary_path %}
+                                            {% if p.secondary_path == 8000 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_precision.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8100 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8200 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7201_sorcery.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8300 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7203_whimsy.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% elif p.secondary_path == 8400 %}<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7204_resolve.png" class="rune-icon" onerror="this.style.display='none'">
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center gap-0.5 ml-auto">
+                                        {% for item_id in (p.slots if p.slots is defined else p.item_ids if p.item_ids is defined else [])[:6] %}
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item_id }}.png"
+                                             class="item-icon-sm" onerror="this.style.display='none'" alt="">
+                                        {% endfor %}
+                                        {% for i in range(6 - ((p.slots if p.slots is defined else p.item_ids if p.item_ids is defined else [])|length)) %}
+                                        <div style="width:20px;height:20px;border-radius:3px;background:#1A1D24;border:1px solid #2A2D35;"></div>
+                                        {% endfor %}
+                                        <div class="trinket-sep"></div>
+                                        {% if p.trinket is defined and p.trinket %}
+                                        <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ p.trinket }}.png"
+                                             class="trinket-icon" title="Trinket" onerror="this.style.display='none'" alt="">
+                                        {% else %}
+                                        <div style="width:20px;height:20px;border-radius:3px;background:#1A1D24;border:1px solid #C89B3C22;"></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}{% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <p class="text-xs font-semibold text-blue-500 mb-2 uppercase tracking-wider">Allies</p>
+                                {% for champ in match.ally_champs %}
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ champ }}.png" class="w-6 h-6 rounded-full" onerror="this.style.display='none'" alt="">
+                                    <span class="text-xs text-gray-400">{{ champ }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">Enemies</p>
+                                {% for champ in match.enemy_champs %}
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/{{ champ }}.png" class="w-6 h-6 rounded-full" onerror="this.style.display='none'" alt="">
+                                    <span class="text-xs text-gray-400">{{ champ }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            {% if total_unfiltered > 50 %}
+            <div class="text-center mt-4">
+                <a href="?build={{ active_build }}&position={{ active_position }}&side={{ active_side }}&limit=all"
+                   class="inline-block px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                   style="background:#1E2128;border:1px solid #2A2D35;color:#9CA3AF;"
+                   onmouseover="this.style.borderColor='#C89B3C';this.style.color='#C89B3C';"
+                   onmouseout="this.style.borderColor='#2A2D35';this.style.color='#9CA3AF';">
+                    View all games ({{ total_unfiltered }})
+                </a>
+            </div>
+            {% endif %}
+
+    </div>
+
+    <!-- ── STATS PERSONALES ───────────────────────────────────────── -->
+    <div class="px-4 md:px-6 pb-10 max-w-screen-xl mx-auto mt-8">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="condensed font-black text-2xl" style="color:#C89B3C;">MIS STATS DETALLADAS</h2>
+            <span class="text-xs text-gray-600">Based on your saved games</span>
+        </div>
+
+        <!-- Mini filter bar -->
+        <div style="background:#0F1218;border:1px solid #1E2128;border-radius:8px;" class="px-4 py-2 flex items-center gap-4 mb-4 flex-wrap">
+            <div class="flex gap-1" id="psBuildFilters">
+                <button class="filter-tab active text-xs" onclick="setPsFilter('build','all',this)">All</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('build','ap',this)">AP</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('build','ad',this)">AD</button>
+            </div>
+            <div class="flex gap-1 flex-wrap" id="psRoleFilters">
+                <button class="filter-tab active text-xs" onclick="setPsFilter('position','all',this)">All</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('position','jungle',this)">Jungle</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('position','support',this)">Support</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('position','mid',this)">Mid</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('position','top',this)">Top</button>
+                <button class="filter-tab text-xs" onclick="setPsFilter('position','bot',this)">Bot</button>
+            </div>
+            <span id="psTotal" class="text-xs text-gray-600 ml-auto"></span>
+        </div>
+
+        <!-- Stats grid — reuses stats.html components rendered here -->
+        <div id="psContent">
+            <div class="text-center text-gray-600 text-sm py-8">Loading personal stats...</div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+function timeAgo(ts) {
+    if (!ts) return '';
+    const diff = Math.floor(Date.now() / 1000) - ts;
+    if (diff < 60)      return 'just now';
+    if (diff < 3600)    return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400)   return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 2592000) return Math.floor(diff / 86400) + 'd ago';
+    return Math.floor(diff / 2592000) + 'mo ago';
+}
+document.querySelectorAll('.time-ago').forEach(el => {
+    el.textContent = timeAgo(parseInt(el.dataset.ts));
+});
+
+function toggleMatch(matchId) {
+    const detail = document.getElementById('detail-' + matchId);
+    const arrow  = document.getElementById('arrow-'  + matchId);
+    const hidden = detail.classList.contains('hidden');
+    detail.classList.toggle('hidden');
+    arrow.style.transform = hidden ? 'rotate(180deg)' : '';
+}
+
+const input  = document.getElementById('summonerInput');
+const acList = document.getElementById('autocomplete-list');
+let acTimer;
+input.addEventListener('input', function() {
+    clearTimeout(acTimer);
+    const q = this.value.trim();
+    if (q.length < 2) { acList.classList.add('hidden'); return; }
+    acTimer = setTimeout(async () => {
+        try {
+            const res  = await fetch(`/search?q=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            if (!data.results.length) { acList.classList.add('hidden'); return; }
+            acList.innerHTML = data.results.map(r =>
+                `<div class="ac-item" onclick="selectPlayer('${r.name}','${r.region}')">
+                    <span style="color:#C89B3C;font-size:11px;">${r.region.toUpperCase()}</span>
+                    <span>${r.name}</span>
+                </div>`
+            ).join('');
+            acList.classList.remove('hidden');
+        } catch(e) {}
+    }, 250);
+});
+function selectPlayer(name, region) {
+    const parts = name.split('#');
+    input.value = parts[0];
+    if (parts[1]) document.getElementById('tagInput').value = parts[1];
+    document.getElementById('regionSelect').value = region;
+    acList.classList.add('hidden');
+    window.location.href = `/player-page/${region}/${encodeURIComponent(parts[0])}`;
+}
+document.addEventListener('click', e => { if (!input.contains(e.target)) acList.classList.add('hidden'); });
+
+async function refreshPlayer() {
+    const btn      = document.getElementById('refreshBtn');
+    const icon     = document.getElementById('refreshIcon');
+    const text     = document.getElementById('refreshText');
+    const parts    = window.location.pathname.split('/');
+    const region   = parts[2];
+    // Full name from h1 may include #tag (e.g. "Sildavia traitor#mkp")
+    const fullName = document.querySelector('h1')?.textContent?.trim() || decodeURIComponent(parts[3]);
+    const hashIdx  = fullName.indexOf('#');
+    const summoner = hashIdx >= 0 ? fullName.substring(0, hashIdx) : fullName;
+    const tag      = hashIdx >= 0 ? fullName.substring(hashIdx + 1) : '{{ summoner_tag }}';
+
+    btn.disabled = true;
+    icon.style.display = 'inline-block';
+    icon.style.animation = 'spin 1s linear infinite';
+    text.textContent = 'Actualizando...';
+
+    // Add spin keyframe if not present
+    if (!document.getElementById('spin-style')) {
+        const s = document.createElement('style');
+        s.id = 'spin-style';
+        s.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+        document.head.appendChild(s);
+    }
+
+    try {
+        const res  = await fetch(`/fetch/${region}/${encodeURIComponent(summoner)}/${tag}`);
+        const data = await res.json();
+        text.textContent = 'Done!';
+        icon.style.animation = '';
+        icon.textContent = '✓';
+        btn.style.color = '#4ade80';
+        btn.style.borderColor = '#4ade8044';
+        setTimeout(() => { window.location.reload(); }, 800);
+    } catch(e) {
+        text.textContent = 'Error';
+        icon.textContent = '✕';
+        icon.style.animation = '';
+        btn.style.color = '#f87171';
+        btn.disabled = false;
+        setTimeout(() => {
+            text.textContent = 'Refresh';
+            icon.textContent = '↻';
+            btn.style.color = '#9CA3AF';
+            btn.style.borderColor = '#2A2D35';
+        }, 2000);
+    }
+}
+
+document.getElementById('searchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    acList.classList.add('hidden');
+    const summoner = input.value.trim();
+    const tag      = document.getElementById('tagInput').value.trim() || 'EUW';
+    const region   = document.getElementById('regionSelect').value;
+    const status   = document.getElementById('searchStatus');
+    if (!summoner) return;
+    status.textContent = 'Fetching...';
+    status.classList.remove('hidden');
+    try {
+        const res  = await fetch(`/fetch/${region}/${summoner}/${tag}`);
+        const data = await res.json();
+        status.textContent = data.message;
+        setTimeout(() => { window.location.href = `/player-page/${region}/${encodeURIComponent(summoner)}?tag=${tag}`; }, 800);
+    } catch(err) {
+        status.textContent = 'Error. Try again.';
+    }
+});
+
+// ── Personal Stats ────────────────────────────────────────────────────
+const PLAYER_PUUID = "{{ puuid }}";
+const PLAYER_PATCH = "{{ patch }}";
+let psFilters = { build: 'all', position: 'all' };
+
+function setPsFilter(type, val, btn) {
+    psFilters[type] = val;
+    const group = type === 'build' ? 'psBuildFilters' : 'psRoleFilters';
+    document.getElementById(group).querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadPersonalStats();
+}
+
+function psWrTag(wr) {
+    if (wr >= 53) return `<span style="background:#0F2A15;color:#4ADE80;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">${wr}%</span>`;
+    if (wr >= 47) return `<span style="background:#2A1E08;color:#FBBF24;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">${wr}%</span>`;
+    return `<span style="background:#2A0A0A;color:#F87171;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">${wr}%</span>`;
+}
+
+function psWrBarColor(wr) {
+    if (wr >= 53) return '#22C55E';
+    if (wr >= 47) return '#F59E0B';
+    return '#EF4444';
+}
+
+function psChampIcon(name) {
+    const clean = name.replace(/[\s\'\. ]/g,'');
+    return `https://ddragon.leagueoflegends.com/cdn/${PLAYER_PATCH}/img/champion/${clean}.png`;
+}
+
+async function loadPersonalStats() {
+    if (!PLAYER_PUUID) return;
+    document.getElementById('psContent').innerHTML = '<div class="text-center text-gray-600 text-sm py-8">Loading...</div>';
+    const params = new URLSearchParams({ build: psFilters.build, position: psFilters.position, puuid: PLAYER_PUUID });
+    const res  = await fetch(`/stats-data?${params}`);
+    const d    = await res.json();
+    if (!d || d.error || d.total === 0) {
+        document.getElementById('psContent').innerHTML = '<div class="text-center text-gray-600 text-sm py-8">No data for this filter combination.</div>';
+        return;
+    }
+    document.getElementById('psTotal').textContent = `${d.total} games`;
+    renderPersonalStats(d);
+}
+
+function renderPersonalStats(d) {
+    const card = (title, html) => `
+        <div style="background:#13161C;border:1px solid #1E2128;border-radius:10px;padding:16px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;color:#C89B3C;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">${title}</div>
+            ${html}
+        </div>`;
+
+    const barRow = (label, wr, games) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:12px;color:#9CA3AF;width:100px;flex-shrink:0;">${label}</span>
+            <div style="flex:1;height:6px;border-radius:3px;background:#1E2128;overflow:hidden;">
+                <div style="height:100%;border-radius:3px;background:${psWrBarColor(wr)};width:${Math.min(wr,100)}%;transition:width 0.5s;"></div>
+            </div>
+            <span style="font-size:11px;color:#6B7280;width:28px;text-align:right;">${games}G</span>
+            ${psWrTag(wr)}
+        </div>`;
+
+    // VS enemies top 20
+    const enemies = d.vs_enemies.slice(0, 20).map(e => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;" onmouseover="this.style.background='#1A1D24'" onmouseout="this.style.background=''">
+            <img src="${psChampIcon(e.champ)}" style="width:26px;height:26px;border-radius:50%;border:1px solid #2A2D35;" onerror="this.style.display='none'">
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#D1D5DB;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.champ}</div>
+                <div style="font-size:11px;color:#6B7280;">${e.games}G · ${e.kda} KDA</div>
+            </div>
+            ${psWrTag(e.wr)}
+        </div>`).join('');
+
+    // Conditions
+    const conditions = [
+        { label: 'Blue vs Red side', data: d.wr_side },
+        { label: 'First Blood', data: d.wr_first_blood },
+        { label: 'Game duration', data: d.wr_duration },
+        { label: 'Baron', data: d.wr_baron },
+    ].map(({ label, data }) => `
+        <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">${label}</div>
+            ${Object.entries(data).map(([k,v]) => barRow(k, v.wr, v.games)).join('')}
+        </div>`).join('');
+
+    document.getElementById('psContent').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
+            ${card('Overview', `
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;">
+                    <div style="background:#0F1218;border-radius:8px;padding:12px;">
+                        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;color:${psWrBarColor(d.wr)}">${d.wr}%</div>
+                        <div style="font-size:11px;color:#6B7280;margin-top:2px;">Global WR</div>
+                    </div>
+                    <div style="background:#0F1218;border-radius:8px;padding:12px;">
+                        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;color:${psWrBarColor(d.wr_build.AP.wr)}">${d.wr_build.AP.wr}%</div>
+                        <div style="font-size:11px;color:#6B7280;margin-top:2px;">AP (${d.wr_build.AP.games}G)</div>
+                    </div>
+                    <div style="background:#0F1218;border-radius:8px;padding:12px;">
+                        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;color:${psWrBarColor(d.wr_build.AD.wr)}">${d.wr_build.AD.wr}%</div>
+                        <div style="font-size:11px;color:#6B7280;margin-top:2px;">AD (${d.wr_build.AD.games}G)</div>
+                    </div>
+                </div>
+            `)}
+            ${card('WR vs enemy champion', enemies)}
+            ${card('Conditions', conditions)}
+            ${card('Objectives', [
+                barRow('Team dragons', Object.values(d.wr_dragons).slice(-1)[0]?.wr || 0, Object.values(d.wr_dragons).slice(-1)[0]?.games || 0),
+                ...Object.entries(d.wr_dragons).map(([k,v]) => barRow(k, v.wr, v.games)),
+                barRow('Baron', d.wr_baron['with']?.wr || 0, d.wr_baron['with']?.games || 0),
+                barRow('Void Grubs (3+)', d.wr_voidgrubs['3+ grubs']?.wr || 0, d.wr_voidgrubs['3+ grubs']?.games || 0),
+            ].join(''))}
+        </div>`;
+}
+
+// Load on page ready
+document.addEventListener('DOMContentLoaded', () => {
+    if (PLAYER_PUUID) loadPersonalStats();
+    checkFetchStatus();
+});
+
+// ── Background fetch banner ───────────────────────────────────────────
+async function checkFetchStatus() {
+    const parts    = window.location.pathname.split('/');
+    const region   = parts[2];
+    const summoner = decodeURIComponent(parts[3]);
+    const banner   = document.getElementById('fetchingBanner');
+    const doneBanner = document.getElementById('fetchDoneBanner');
+    const doneText = document.getElementById('fetchDoneText');
+    const progress = document.getElementById('fetchProgress');
+    if (!banner) return;
+
+    let interval;
+    let wasRunning = false;
+
+    async function poll() {
+        try {
+            const res  = await fetch(`/fetch-status/${region}/${encodeURIComponent(summoner)}`);
+            const data = await res.json();
+            if (data.status === 'running') {
+                wasRunning = true;
+                banner.style.display = 'flex';
+                doneBanner.style.display = 'none';
+                if (data.total > 0) {
+                    progress.textContent = `(${data.progress}/${data.total} games)`;
+                }
+            } else {
+                banner.style.display = 'none';
+                clearInterval(interval);
+                if (wasRunning && data.status === 'done' && data.nuevas > 0) {
+                    doneText.textContent = `${data.nuevas} new game${data.nuevas !== 1 ? 's' : ''} found.`;
+                    doneBanner.style.display = 'flex';
+                }
+            }
+        } catch(e) {
+            clearInterval(interval);
+        }
+    }
+    poll();
+    interval = setInterval(poll, 3000);
+}
+
+</script>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Shaco — Advanced Analytics for Shaco One-Tricks</title>
+    <meta name="description" content="Advanced stats for Shaco OTP players. Winrates, builds, matchups and more.">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        body { background: #0B0D11; color: #E5E7EB; min-height: 100vh; }
+        .condensed { font-family: 'Barlow Condensed', sans-serif; }
+
+        @keyframes float { 0%,100% { transform: translateY(0px) rotate(-3deg); } 50% { transform: translateY(-12px) rotate(3deg); } }
+        @keyframes glow  { 0%,100% { filter: drop-shadow(0 0 12px #C89B3C66); } 50% { filter: drop-shadow(0 0 28px #C89B3CAA); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+
+        .shaco-float { animation: float 4s ease-in-out infinite, glow 3s ease-in-out infinite; }
+        .fade-up     { animation: fadeUp 0.6s ease forwards; }
+        .fade-up-2   { animation: fadeUp 0.6s 0.15s ease both; }
+        .fade-up-3   { animation: fadeUp 0.6s 0.3s ease both; }
+
+        .search-box {
+            background: #13161C;
+            border: 1px solid #2A2D35;
+            border-radius: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-box:focus-within {
+            border-color: #C89B3C;
+            box-shadow: 0 0 0 3px #C89B3C22;
+        }
+        .search-btn {
+            background: linear-gradient(135deg, #C89B3C, #E8B84B);
+            color: #0B0D11;
+            font-weight: 800;
+            border-radius: 8px;
+            transition: filter 0.2s, transform 0.1s;
+        }
+        .search-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .search-btn:active { transform: translateY(0); }
+
+        .region-btn {
+            background: #1A1D24;
+            border: 1px solid #2A2D35;
+            border-radius: 6px;
+            color: #6B7280;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .region-btn.active {
+            background: #1E2A1A;
+            border-color: #C89B3C;
+            color: #C89B3C;
+        }
+        .region-btn:hover:not(.active) {
+            border-color: #4B5563;
+            color: #9CA3AF;
+        }
+
+        .feature-card {
+            background: #13161C;
+            border: 1px solid #1E2128;
+            border-radius: 10px;
+            padding: 16px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .feature-card:hover {
+            border-color: #C89B3C44;
+            transform: translateY(-2px);
+        }
+
+        #autocomplete {
+            background: #13161C;
+            border: 1px solid #2A2D35;
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 50;
+        }
+        .ac-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .ac-item:hover { background: #1A1D24; }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #C89B3C, #F0C060);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav style="border-bottom:1px solid #1E2128;" class="px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+             style="width:28px;height:28px;border-radius:6px;border:1px solid #C89B3C44;" alt="Shaco">
+        <span class="condensed font-bold text-lg" style="color:#C89B3C;">OTP SHACO</span>
+    </div>
+    <div class="flex items-center gap-4 text-sm text-gray-500">
+        <a href="/top-shacos" class="hover:text-gray-300 transition-colors">Top OTPs</a>
+        <a href="/draft" class="hover:text-gray-300 transition-colors">Draft</a>
+        <a href="/stats" class="hover:text-gray-300 transition-colors">Global Stats</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="flex flex-col items-center justify-center px-4" style="min-height: calc(100vh - 52px);">
+
+    <!-- Shaco image -->
+    <div class="shaco-float mb-6 fade-up">
+        <img src="https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Shaco_0.jpg"
+             style="width:120px;height:120px;border-radius:20px;border:2px solid #C89B3C55;object-fit:cover;object-position:top;"
+             alt="Shaco">
+    </div>
+
+    <!-- Title -->
+    <div class="text-center mb-2 fade-up-2">
+        <h1 class="condensed font-black text-5xl gradient-text tracking-tight">OTP SHACO</h1>
+        <p class="text-gray-500 mt-2 text-sm">Advanced analytics for those who live in the shadows 🃏</p>
+    </div>
+
+    {% if error %}
+    <div class="mb-4 px-4 py-2 rounded-lg text-sm font-semibold" style="background:#2A0A0A;color:#F87171;border:1px solid #EF444433;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Search form -->
+    <div class="w-full max-w-lg fade-up-3">
+        <form action="/search-player" method="get">
+
+            <!-- Region selector -->
+            <div class="flex gap-2 mb-3 justify-center flex-wrap" id="regionBtns">
+                <input type="hidden" name="region" id="regionInput" value="euw1">
+                {% for r in [("EUW", "euw1"), ("NA", "na1"), ("KR", "kr"), ("EUNE", "eun1"), ("BR", "br1"), ("LAS", "la2"), ("LAN", "la1")] %}
+                <button type="button" class="region-btn {% if loop.first %}active{% endif %}"
+                        onclick="selectRegion('{{ r[1] }}', this)">{{ r[0] }}</button>
+                {% endfor %}
+            </div>
+
+            <!-- Name + tag + button -->
+            <div class="search-box flex items-center gap-2 p-2">
+                <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                     style="width:20px;height:20px;border-radius:4px;opacity:0.5;flex-shrink:0;" alt="">
+                <input
+                    type="text"
+                    name="name"
+                    id="searchInput"
+                    placeholder="Summoner name"
+                    autocomplete="off"
+                    class="flex-1 bg-transparent outline-none text-sm text-gray-200 placeholder-gray-600"
+                    style="min-width:0;"
+                >
+                <span class="text-gray-600 font-bold flex-shrink-0">#</span>
+                <input
+                    type="text"
+                    name="tag"
+                    id="tagInput"
+                    placeholder="EUW"
+                    value="EUW"
+                    class="bg-transparent outline-none text-sm text-gray-400 w-16 flex-shrink-0"
+                    style="min-width:0;"
+                >
+                <button type="submit" class="search-btn px-4 py-2 text-sm flex-shrink-0">
+                    Search
+                </button>
+            </div>
+
+            <!-- Autocomplete -->
+            <div id="autocomplete" class="absolute hidden w-full max-w-lg mt-1"></div>
+        </form>
+
+        <p class="text-center text-xs text-gray-700 mt-3">
+            Example: <span style="color:#C89B3C55;">Pendulum</span> #25511 — EUW
+        </p>
+    </div>
+
+    <!-- Feature pills -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-12 w-full max-w-2xl fade-up-3">
+        <div class="feature-card text-center">
+            <div class="text-2xl mb-1">🗡️</div>
+            <div class="text-xs font-bold text-gray-300">AP / AD Builds</div>
+            <div class="text-xs text-gray-600 mt-1">What to build for each matchup</div>
+        </div>
+        <div class="feature-card text-center">
+            <div class="text-2xl mb-1">📊</div>
+            <div class="text-xs font-bold text-gray-300">Winrates</div>
+            <div class="text-xs text-gray-600 mt-1">vs every enemy champion</div>
+        </div>
+        <div class="feature-card text-center">
+            <div class="text-2xl mb-1">🎯</div>
+            <div class="text-xs font-bold text-gray-300">Draft Recommender</div>
+            <div class="text-xs text-gray-600 mt-1">AP or AD based on your comp</div>
+        </div>
+        <div class="feature-card text-center">
+            <div class="text-2xl mb-1">👁️</div>
+            <div class="text-xs font-bold text-gray-300">Pro Stats</div>
+            <div class="text-xs text-gray-600 mt-1">Top Shaco one-tricks tracked</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const autocomplete = document.getElementById('autocomplete');
+let debounce;
+
+function selectRegion(val, btn) {
+    document.getElementById('regionInput').value = val;
+    document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Update tag placeholder based on region
+    const tagMap = { euw1:'EUW', na1:'NA1', kr:'KR1', eun1:'EUNE', br1:'BR1', la2:'LAS', la1:'LAN' };
+    const tagInput = document.getElementById('tagInput');
+    if (!tagInput._edited) {
+        tagInput.value = tagMap[val] || val.toUpperCase();
+    }
+}
+
+document.getElementById('tagInput').addEventListener('input', function() {
+    this._edited = true;
+});
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(debounce);
+    const q = this.value.trim();
+    if (q.length < 2) { autocomplete.classList.add('hidden'); return; }
+    debounce = setTimeout(async () => {
+        const res  = await fetch(`/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!data.results.length) { autocomplete.classList.add('hidden'); return; }
+        autocomplete.innerHTML = data.results.map(r => {
+            const [rName, rTag] = r.name.includes('#') ? r.name.split('#') : [r.name, ''];
+            return `<div class="ac-item" onclick="selectPlayer('${rName}', '${rTag}', '${r.region}')">
+                <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                     style="width:20px;height:20px;border-radius:4px;opacity:0.6;">
+                <div>
+                    <span class="text-sm font-semibold text-gray-200">${rName}</span>
+                    <span class="text-xs text-gray-600 ml-1">#${rTag}</span>
+                </div>
+                <span class="ml-auto text-xs text-gray-700 uppercase">${r.region}</span>
+            </div>`;
+        }).join('');
+        autocomplete.classList.remove('hidden');
+    }, 200);
+});
+
+function selectPlayer(name, tag, region) {
+    searchInput.value = name;
+    document.getElementById('tagInput').value = tag;
+    document.getElementById('regionInput').value = region;
+    document.querySelectorAll('.region-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('onclick').includes(`'${region}'`));
+    });
+    autocomplete.classList.add('hidden');
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('#autocomplete') && !e.target.closest('#searchInput')) {
+        autocomplete.classList.add('hidden');
+    }
+});
+</script>
+</body>
+</html>

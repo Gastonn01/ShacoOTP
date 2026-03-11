@@ -27,10 +27,10 @@ seed_*.py
 check_player.py
 
 # Old loose HTML files at root (real templates are in templates/)
-index.html
-loading.html
-player.html
-stats.html
+/index.html
+/loading.html
+/player.html
+/stats.html
 
 # Backups
 *.bak

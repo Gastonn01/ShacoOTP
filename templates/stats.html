@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Shaco Stats — OTP Shaco</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family:'Barlow',sans-serif; }
+        body { background:#0B0D11; color:#E5E7EB; }
+        .condensed { font-family:'Barlow Condensed',sans-serif; }
+        .card { background:#13161C; border:1px solid #1E2128; border-radius:10px; }
+        .filter-btn { background:#1A1D24; border:1px solid #2A2D35; border-radius:6px; color:#6B7280; font-size:12px; font-weight:700; padding:4px 12px; cursor:pointer; transition:all 0.15s; }
+        .filter-btn.active { background:#1A2410; border-color:#C89B3C; color:#C89B3C; }
+        .filter-btn:hover:not(.active) { border-color:#4B5563; color:#9CA3AF; }
+        .wr-bar-bg { height:6px; border-radius:3px; background:#1E2128; overflow:hidden; }
+        .wr-bar { height:100%; border-radius:3px; transition:width 0.6s ease; }
+        .wr-high { background:linear-gradient(90deg,#4ADE80,#22C55E); }
+        .wr-mid  { background:linear-gradient(90deg,#FBBF24,#F59E0B); }
+        .wr-low  { background:linear-gradient(90deg,#F87171,#EF4444); }
+        .champ-row { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; transition:background 0.1s; cursor:pointer; }
+        .champ-row:hover { background:#1A1D24; }
+        .section-title { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:18px; color:#C89B3C; letter-spacing:0.5px; text-transform:uppercase; }
+        .stat-block { background:#0F1218; border:1px solid #1E2128; border-radius:8px; padding:12px 16px; }
+        .big-num { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:28px; }
+        .tag-wr { font-size:11px; font-weight:700; padding:2px 6px; border-radius:4px; }
+        .tag-high { background:#0F2A15; color:#4ADE80; }
+        .tag-mid  { background:#2A1E08; color:#FBBF24; }
+        .tag-low  { background:#2A0A0A; color:#F87171; }
+        .sort-btn { font-size:10px; color:#4B5563; cursor:pointer; padding:2px 6px; border-radius:4px; }
+        .sort-btn.active { color:#C89B3C; background:#1A1D24; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .fade-in { animation:fadeIn 0.3s ease forwards; }
+        .loading-pulse { animation:pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:0.8} }
+        .grid-16 { display:grid; gap:16px; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav style="border-bottom:1px solid #1E2128;position:sticky;top:0;z-index:40;background:#0B0D11;" class="px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <a href="/" class="flex items-center gap-2">
+            <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                 style="width:24px;height:24px;border-radius:5px;border:1px solid #C89B3C44;">
+            <span class="condensed font-bold text-base" style="color:#C89B3C;">OTP SHACO</span>
+        </a>
+        <span class="text-gray-700">/</span>
+        <span class="text-sm text-gray-400 font-semibold">Global Stats</span>
+    </div>
+    <div class="flex items-center gap-4 text-xs text-gray-600">
+        <a href="/top-shacos" class="hover:text-gray-400 transition-colors">Top OTPs</a>
+        <a href="/draft" class="hover:text-gray-400 transition-colors">Draft →</a>
+    </div>
+</nav>
+
+<!-- Filters bar -->
+<div style="background:#0F1218;border-bottom:1px solid #1E2128;" class="px-6 py-3 flex items-center gap-6 flex-wrap">
+    <!-- Build -->
+    <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-600 font-bold uppercase tracking-wide">Build</span>
+        <div class="flex gap-1" id="buildFilters">
+            <button class="filter-btn active" onclick="setFilter('build','all',this)">All</button>
+            <button class="filter-btn" onclick="setFilter('build','ap',this)">AP</button>
+            <button class="filter-btn" onclick="setFilter('build','ad',this)">AD</button>
+        </div>
+    </div>
+    <!-- Role -->
+    <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-600 font-bold uppercase tracking-wide">Role</span>
+        <div class="flex gap-1 flex-wrap" id="roleFilters">
+            <button class="filter-btn active" onclick="setFilter('position','all',this)">All</button>
+            <button class="filter-btn" onclick="setFilter('position','jungle',this)">🌲 Jungle</button>
+            <button class="filter-btn" onclick="setFilter('position','support',this)">🛡️ Support</button>
+            <button class="filter-btn" onclick="setFilter('position','mid',this)">⚡ Mid</button>
+            <button class="filter-btn" onclick="setFilter('position','top',this)">🗡️ Top</button>
+            <button class="filter-btn" onclick="setFilter('position','bot',this)">🏹 Bot</button>
+        </div>
+    </div>
+    <!-- Timeframe -->
+    <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-600 font-bold uppercase tracking-wide">Period</span>
+        <div class="flex gap-1" id="timeFilters">
+            <button class="filter-btn active" onclick="setFilter('timeframe','all',this)">All time</button>
+            <button class="filter-btn" onclick="setFilter('timeframe','30d',this)">30 days</button>
+            <button class="filter-btn" onclick="setFilter('timeframe','patch',this)">This patch</button>
+        </div>
+    </div>
+    <!-- Summary -->
+    <div class="ml-auto flex items-center gap-3 text-xs text-gray-600" id="summary">
+        <span id="totalGames">Loading...</span>
+    </div>
+</div>
+
+<!-- Main content -->
+<div class="px-6 py-6 max-w-screen-xl mx-auto">
+
+    <!-- Top overview row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="overviewRow">
+        <div class="card p-4 text-center loading-pulse"><div class="big-num text-gray-600">--</div><div class="text-xs text-gray-600 mt-1">Games</div></div>
+        <div class="card p-4 text-center loading-pulse"><div class="big-num text-gray-600">--</div><div class="text-xs text-gray-600 mt-1">Global WR</div></div>
+        <div class="card p-4 text-center loading-pulse"><div class="big-num text-gray-600">--</div><div class="text-xs text-gray-600 mt-1">AP WR</div></div>
+        <div class="card p-4 text-center loading-pulse"><div class="big-num text-gray-600">--</div><div class="text-xs text-gray-600 mt-1">AD WR</div></div>
+    </div>
+
+    <!-- Grid layout: 2 cols on desktop -->
+    <div class="grid md:grid-cols-2 gap-6">
+
+        <!-- 1. WR vs Enemy -->
+        <div class="card p-4 md:col-span-2">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <span class="section-title">WR vs enemy champion</span>
+                <div class="flex gap-1 flex-wrap">
+                    <button class="sort-btn enemy-sort-btn active" id="enemySort_games" onclick="sortEnemies('games')">by games</button>
+                    <button class="sort-btn enemy-sort-btn" id="enemySort_wr" onclick="sortEnemies('wr')">by WR</button>
+                    <button class="sort-btn enemy-sort-btn" id="enemySort_kda" onclick="sortEnemies('kda')">by KDA</button>
+                </div>
+            </div>
+            <!-- Enemy filters row -->
+            <div class="flex gap-2 mb-3 flex-wrap items-center">
+                <input id="enemySearch" type="text" placeholder="🔍 Search champion..."
+                       oninput="filterEnemies()"
+                       class="text-xs px-3 py-1 rounded-lg outline-none text-gray-300 placeholder-gray-600"
+                       style="background:#0F1218;border:1px solid #2A2D35;width:160px;">
+                <div class="flex gap-1 flex-wrap" id="enemyLaneFilters">
+                    <button class="sort-btn enemy-lane-btn active" id="elane_all" onclick="setEnemyLane('all',this)">All</button>
+                    <button class="sort-btn enemy-lane-btn" id="elane_top" onclick="setEnemyLane('top',this)">Top</button>
+                    <button class="sort-btn enemy-lane-btn" id="elane_jungle" onclick="setEnemyLane('jungle',this)">Jungle</button>
+                    <button class="sort-btn enemy-lane-btn" id="elane_mid" onclick="setEnemyLane('mid',this)">Mid</button>
+                    <button class="sort-btn enemy-lane-btn" id="elane_bot" onclick="setEnemyLane('bot',this)">Bot</button>
+                    <button class="sort-btn enemy-lane-btn" id="elane_support" onclick="setEnemyLane('support',this)">Support</button>
+                </div>
+            </div>
+            <div class="text-xs text-gray-600 mb-2">Minimum 3 games against this champion</div>
+            <div id="vsEnemies" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 max-h-96 overflow-y-auto pr-1">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 2. Best allies -->
+        <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="section-title">Best allies</span>
+                <span class="text-xs text-gray-600">3+ games together</span>
+            </div>
+            <div id="bestAllies" class="space-y-1 max-h-72 overflow-y-auto">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 4. WR by item -->
+        <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="section-title">WR by item</span>
+                <span class="text-xs text-gray-600">5+ games with item</span>
+            </div>
+            <div id="itemsWR" class="space-y-1 max-h-72 overflow-y-auto">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Counter items -->
+        <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="section-title">⚔️ Enemy counter items</span>
+                <span class="text-xs text-gray-600">items most common in losses</span>
+            </div>
+            <div class="text-xs text-gray-500 mb-3">Impact = WR % points worse than global WR when enemy has this item</div>
+            <div id="counterItems" class="space-y-1 max-h-72 overflow-y-auto">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 5. WR by summoner spell -->
+        <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="section-title">WR by summoner spell</span>
+            </div>
+            <div id="spellsWR" class="space-y-2">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 7+8. Two-col conditions -->
+        <div class="card p-4">
+            <span class="section-title block mb-3">Game conditions</span>
+            <div class="space-y-4" id="conditions">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 9+10. Objectives -->
+        <div class="card p-4">
+            <span class="section-title block mb-3">Objectives</span>
+            <div class="space-y-4" id="objectives">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 11. WR by duration -->
+        <div class="card p-4">
+            <span class="section-title block mb-3">WR by game duration</span>
+            <div id="durationWR" class="space-y-2">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+        <!-- 12. WR by position -->
+        <div class="card p-4">
+            <span class="section-title block mb-3">WR by role</span>
+            <div id="positionWR" class="space-y-2">
+                <div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const PATCH = "{{ patch }}";
+let currentData = null;
+let filters = { build: 'all', position: 'all', timeframe: 'all' };
+let enemySort = 'games';
+let enemyLane  = 'all';
+let enemySearch = '';
+
+function getChampLane(champ, data) {
+    const entry = data.find(e => e.champ === champ);
+    return entry ? entry.lane : 'unknown';
+}
+
+function setEnemyLane(lane, btn) {
+    enemyLane = lane;
+    document.querySelectorAll('.enemy-lane-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (currentData) renderEnemies(currentData.vs_enemies);
+}
+
+function filterEnemies() {
+    enemySearch = document.getElementById('enemySearch').value.toLowerCase();
+    if (currentData) renderEnemies(currentData.vs_enemies);
+}
+
+const SPELL_NAMES = {
+    4:"Flash", 14:"Ignite", 11:"Smite", 12:"Teleport", 6:"Ghost",
+    3:"Exhaust", 7:"Heal", 1:"Cleanse", 21:"Barrier", 13:"Clarity",
+};
+
+function wrColor(wr) {
+    if (wr >= 53) return 'wr-high';
+    if (wr >= 47) return 'wr-mid';
+    return 'wr-low';
+}
+function wrTag(wr) {
+    if (wr >= 53) return `<span class="tag-wr tag-high">${wr}%</span>`;
+    if (wr >= 47) return `<span class="tag-wr tag-mid">${wr}%</span>`;
+    return `<span class="tag-wr tag-low">${wr}%</span>`;
+}
+
+function champIcon(name) {
+    const clean = name.replace(/[\s'\.]/g,'').replace("Wukong","MonkeyKing");
+    return `https://ddragon.leagueoflegends.com/cdn/${PATCH}/img/champion/${clean}.png`;
+}
+function itemIcon(id) {
+    return `https://ddragon.leagueoflegends.com/cdn/${PATCH}/img/item/${id}.png`;
+}
+
+function setFilter(type, val, btn) {
+    filters[type] = val;
+    const groupMap = { build: 'buildFilters', position: 'roleFilters', timeframe: 'timeFilters' };
+    const group = groupMap[type] || 'buildFilters';
+    document.getElementById(group).querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadStats();
+}
+
+async function loadStats() {
+    showLoading();
+    const params = new URLSearchParams({ build: filters.build, position: filters.position, timeframe: filters.timeframe });
+    const puuid  = window._playerPuuid || '';
+    if (puuid) params.set('puuid', puuid);
+
+    const res  = await fetch(`/stats-data?${params}`);
+    currentData = await res.json();
+    renderAll(currentData);
+}
+
+function showLoading() {
+    ['vsEnemies','bestAllies','itemsWR','spellsWR','counterItems','conditions','objectives','durationWR','positionWR'].forEach(id => {
+        document.getElementById(id).innerHTML =
+            '<div class="text-gray-700 text-xs loading-pulse p-4">Loading...</div>';
+    });
+}
+
+function renderAll(d) {
+    if (d.error || d.total === 0) {
+        document.getElementById('totalGames').textContent = 'Not enough data yet';
+        return;
+    }
+
+    document.getElementById('totalGames').textContent = `${d.total} games analyzed`;
+    document.getElementById('overviewRow').innerHTML = `
+        <div class="card p-4 text-center fade-in">
+            <div class="big-num" style="color:#C89B3C;">${d.total}</div>
+            <div class="text-xs text-gray-500 mt-1">Games</div>
+        </div>
+        <div class="card p-4 text-center fade-in">
+            <div class="big-num ${d.wr >= 50 ? 'text-green-400' : 'text-red-400'}">${d.wr}%</div>
+            <div class="text-xs text-gray-500 mt-1">Global WR</div>
+        </div>
+        <div class="card p-4 text-center fade-in">
+            <div class="big-num ${d.wr_build.AP.wr >= 50 ? 'text-green-400' : 'text-red-400'}">${d.wr_build.AP.wr}%</div>
+            <div class="text-xs text-gray-500 mt-1">AP WR <span class="text-gray-700">(${d.wr_build.AP.games})</span></div>
+        </div>
+        <div class="card p-4 text-center fade-in">
+            <div class="big-num ${d.wr_build.AD.wr >= 50 ? 'text-green-400' : 'text-red-400'}">${d.wr_build.AD.wr}%</div>
+            <div class="text-xs text-gray-500 mt-1">AD WR <span class="text-gray-700">(${d.wr_build.AD.games})</span></div>
+        </div>
+    `;
+
+    renderEnemies(d.vs_enemies);
+    renderAllies(d.with_allies);
+    renderItems(d.wr_items);
+    renderCounterItems(d.counter_items);
+    renderSpells(d.wr_spells);
+    renderConditions(d);
+    renderObjectives(d);
+    renderDuration(d.wr_duration);
+    renderPosition(d.wr_position);
+}
+
+function sortEnemies(by) {
+    enemySort = by;
+    document.querySelectorAll('.enemy-sort-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('enemySort_' + by).classList.add('active');
+    if (currentData) renderEnemies(currentData.vs_enemies);
+}
+
+function renderEnemies(data) {
+    let filtered = [...data];
+    if (enemyLane !== 'all') {
+        filtered = filtered.filter(e => e.lane === enemyLane);
+    }
+    if (enemySearch) {
+        filtered = filtered.filter(e => e.champ.toLowerCase().includes(enemySearch));
+    }
+    const sorted = filtered.sort((a,b) => b[enemySort] - a[enemySort]);
+    document.getElementById('vsEnemies').innerHTML = sorted.length ? sorted.map(e => `
+        <div class="champ-row">
+            <img src="${champIcon(e.champ)}" style="width:28px;height:28px;border-radius:50%;border:1px solid #2A2D35;"
+                 onerror="this.style.display='none'">
+            <div class="flex-1 min-w-0">
+                <div class="text-xs font-semibold text-gray-300 truncate">${e.champ}</div>
+                <div class="text-xs text-gray-600">${e.games}G · ${e.kda} KDA</div>
+            </div>
+            ${wrTag(e.wr)}
+        </div>
+    `).join('') : '<div class="text-gray-600 text-xs p-4">No results for this filter.</div>';
+}
+
+function renderAllies(data) {
+    const top = data.slice(0, 20);
+    document.getElementById('bestAllies').innerHTML = top.length ? top.map(a => `
+        <div class="champ-row">
+            <img src="${champIcon(a.champ)}" style="width:26px;height:26px;border-radius:50%;border:1px solid #2A2D35;"
+                 onerror="this.style.display='none'">
+            <div class="flex-1">
+                <div style="font-size:12px;font-weight:600;color:#D1D5DB;">${a.champ}</div>
+            </div>
+            <span class="text-xs text-gray-600 mr-2">${a.games}G</span>
+            ${wrTag(a.wr)}
+        </div>
+    `).join('') : '<div class="text-gray-600 text-xs p-4">No data yet.</div>';
+}
+
+function renderCounterItems(data) {
+    if (!data || !data.length) {
+        document.getElementById('counterItems').innerHTML = '<div class="text-gray-600 text-xs p-4">Not enough data yet</div>';
+        return;
+    }
+    document.getElementById('counterItems').innerHTML = data.slice(0, 20).map(i => {
+        const impactColor = i.impact > 10 ? '#F87171' : i.impact > 5 ? '#FB923C' : '#FACC15';
+        return `
+        <div class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-900 transition-colors">
+            <img src="${itemIcon(i.item_id)}" style="width:26px;height:26px;border-radius:4px;border:1px solid #2A2D35;"
+                 onerror="this.style.display='none'">
+            <div class="flex-1">
+                <div class="wr-bar-bg"><div class="wr-bar" style="width:${Math.min(i.loss_rate,100)}%;background:#F87171;"></div></div>
+            </div>
+            <span class="text-xs text-gray-600 w-8 text-right">${i.games}G</span>
+            <span class="text-xs font-bold w-16 text-right" style="color:${impactColor}">+${i.impact}%</span>
+        </div>`;
+    }).join('');
+}
+
+function renderItems(data) {
+    document.getElementById('itemsWR').innerHTML = data.length ? data.slice(0,20).map(i => `
+        <div class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-900 transition-colors">
+            <img src="${itemIcon(i.item_id)}" style="width:26px;height:26px;border-radius:4px;border:1px solid #2A2D35;"
+                 onerror="this.style.display='none'">
+            <div class="flex-1">
+                <div class="wr-bar-bg"><div class="wr-bar ${wrColor(i.wr)}" style="width:${Math.min(i.wr,100)}%"></div></div>
+            </div>
+            <span class="text-xs text-gray-600 w-8 text-right">${i.games}G</span>
+            ${wrTag(i.wr)}
+        </div>
+    `).join('') : '<div class="text-gray-600 text-xs p-4">No data yet.</div>';
+}
+
+function renderSpells(data) {
+    document.getElementById('spellsWR').innerHTML = data.map(s => {
+        const name = SPELL_NAMES[s.spell_id] || `ID:${s.spell_id}`;
+        return `
+        <div class="flex items-center gap-3 px-2 py-1 rounded hover:bg-gray-900">
+            <img src="https://ddragon.leagueoflegends.com/cdn/${PATCH}/img/spell/Summoner${name.replace(' ','')}.png"
+                 style="width:28px;height:28px;border-radius:6px;border:1px solid #2A2D35;"
+                 onerror="this.style.background='#2A2D35';this.style.minWidth='28px'">
+            <div class="flex-1">
+                <div class="text-sm font-semibold text-gray-300">${name}</div>
+                <div class="wr-bar-bg mt-1"><div class="wr-bar ${wrColor(s.wr)}" style="width:${Math.min(s.wr,100)}%"></div></div>
+            </div>
+            <span class="text-xs text-gray-600">${s.games}G</span>
+            ${wrTag(s.wr)}
+        </div>`;
+    }).join('');
+}
+
+function renderConditions(d) {
+    const rows = [
+        { label:"First Blood", data: d.wr_first_blood },
+        { label:"Map side", data: d.wr_side },
+        { label:"First tower", data: d.wr_first_tower },
+        { label:"Objective steal", data: d.wr_stolen },
+    ];
+    document.getElementById('conditions').innerHTML = rows.map(r => `
+        <div>
+            <div class="text-xs text-gray-500 font-bold uppercase tracking-wide mb-2">${r.label}</div>
+            <div class="space-y-1">
+                ${Object.entries(r.data).map(([k,v]) => `
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 w-28 shrink-0 capitalize">${k}</span>
+                    <div class="flex-1 wr-bar-bg"><div class="wr-bar ${wrColor(v.wr)}" style="width:${Math.min(v.wr,100)}%"></div></div>
+                    <span class="text-xs text-gray-600 w-8 text-right">${v.games}G</span>
+                    ${wrTag(v.wr)}
+                </div>`).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderObjectives(d) {
+    const rows = [
+        { label:"Team dragons", data: d.wr_dragons },
+        { label:"Baron", data: d.wr_baron },
+        { label:"Void Grubs", data: d.wr_voidgrubs },
+    ];
+    document.getElementById('objectives').innerHTML = rows.map(r => `
+        <div>
+            <div class="text-xs text-gray-500 font-bold uppercase tracking-wide mb-2">${r.label}</div>
+            <div class="space-y-1">
+                ${Object.entries(r.data).map(([k,v]) => `
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 w-28 shrink-0 capitalize">${k}</span>
+                    <div class="flex-1 wr-bar-bg"><div class="wr-bar ${wrColor(v.wr)}" style="width:${Math.min(v.wr,100)}%"></div></div>
+                    <span class="text-xs text-gray-600 w-8 text-right">${v.games}G</span>
+                    ${wrTag(v.wr)}
+                </div>`).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderDuration(d) {
+    document.getElementById('durationWR').innerHTML = Object.entries(d).map(([k,v]) => `
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-400 w-24 shrink-0">${k}</span>
+            <div class="flex-1 wr-bar-bg"><div class="wr-bar ${wrColor(v.wr)}" style="width:${Math.min(v.wr,100)}%"></div></div>
+            <span class="text-xs text-gray-600 w-8 text-right">${v.games}G</span>
+            ${wrTag(v.wr)}
+        </div>
+    `).join('');
+}
+
+function renderPosition(d) {
+    document.getElementById('positionWR').innerHTML = Object.entries(d).map(([k,v]) => `
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-400 w-24 shrink-0">${k}</span>
+            <div class="flex-1 wr-bar-bg"><div class="wr-bar ${wrColor(v.wr)}" style="width:${Math.min(v.wr,100)}%"></div></div>
+            <span class="text-xs text-gray-600 w-8 text-right">${v.games}G</span>
+            ${wrTag(v.wr)}
+        </div>
+    `).join('');
+}
+
+loadStats();
+</script>
+</body>
+</html>
