@@ -34,3 +34,5 @@ stats.html
 
 # Backups
 *.bak
+
+.env.txt
