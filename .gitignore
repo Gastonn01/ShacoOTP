@@ -1,0 +1,36 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Seeder state — don't deploy these
+seed_checkpoint.txt
+ladder_checkpoint.json
+
+# Migration scripts — not needed in production
+migrate*.py
+fix_*.py
+reset.py
+seed_*.py
+check_player.py
+
+# Old loose HTML files at root (real templates are in templates/)
+index.html
+loading.html
+player.html
+stats.html
+
+# Backups
+*.bak

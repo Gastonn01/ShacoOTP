@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top OTP Shacos — OTP Shaco Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        body { background: #0B0D11; color: #E5E7EB; }
+        .condensed { font-family: 'Barlow Condensed', sans-serif; }
+        .card { background: #13161C; border: 1px solid #1E2128; border-radius: 10px; }
+        .wr-high { color: #4ADE80; }
+        .wr-mid  { color: #FBBF24; }
+        .wr-low  { color: #F87171; }
+        .tag-ap { background: #1A0F2A; color: #A78BFA; border: 1px solid #7C3AED44; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+        .tag-ad { background: #2A1A0F; color: #FB923C; border: 1px solid #EA580C44; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+        .sort-btn { font-size: 11px; color: #4B5563; cursor: pointer; padding: 3px 8px; border-radius: 4px; font-weight: 700; transition: all 0.15s; }
+        .sort-btn.active { color: #C89B3C; background: #1A1D24; border: 1px solid #C89B3C44; }
+        .sort-btn:hover:not(.active) { color: #9CA3AF; }
+        .player-row { border-bottom: 1px solid #1A1D24; transition: background 0.1s; }
+        .player-row:hover { background: #13161C; }
+        .player-row:last-child { border-bottom: none; }
+        .rank-badge { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 15px; color: #4B5563; width: 32px; text-align: center; }
+        .rank-badge.top3 { color: #C89B3C; }
+        .region-badge { font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 3px; background: #1A1D24; color: #6B7280; letter-spacing: 0.5px; }
+        .filter-btn { background: #1A1D24; border: 1px solid #2A2D35; border-radius: 6px; color: #6B7280; font-size: 12px; font-weight: 700; padding: 4px 12px; cursor: pointer; transition: all 0.15s; }
+        .filter-btn.active { background: #1A2410; border-color: #C89B3C; color: #C89B3C; }
+        .filter-btn:hover:not(.active) { border-color: #4B5563; color: #9CA3AF; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.25s ease forwards; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav style="border-bottom:1px solid #1E2128;position:sticky;top:0;z-index:40;background:#0B0D11;" class="px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <a href="/" class="flex items-center gap-2">
+            <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                 style="width:24px;height:24px;border-radius:5px;border:1px solid #C89B3C44;">
+            <span class="condensed font-bold text-base" style="color:#C89B3C;">OTP SHACO</span>
+        </a>
+        <span class="text-gray-700">/</span>
+        <span class="text-sm text-gray-400 font-semibold">Top OTP Shacos</span>
+    </div>
+    <div class="flex items-center gap-4 text-xs text-gray-600">
+        <a href="/stats" class="hover:text-gray-400 transition-colors">Global Stats</a>
+        <a href="/draft" class="hover:text-gray-400 transition-colors">Draft</a>
+    </div>
+</nav>
+
+<!-- Header -->
+<div class="px-6 py-8 max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="condensed font-black text-3xl" style="color:#C89B3C;">TOP OTP SHACOS</h1>
+            <p class="text-gray-600 text-sm mt-1">Players with the most tracked Shaco games in the database</p>
+        </div>
+        <div class="text-right">
+            <div class="condensed font-black text-2xl text-gray-300">{{ players|length }}</div>
+            <div class="text-xs text-gray-600">players</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+        <span class="text-xs text-gray-600 font-bold uppercase tracking-wide">Region</span>
+        <button class="filter-btn active" onclick="filterRegion('all', this)">All</button>
+        <button class="filter-btn" onclick="filterRegion('euw1', this)">EUW</button>
+        <button class="filter-btn" onclick="filterRegion('na1', this)">NA</button>
+        <button class="filter-btn" onclick="filterRegion('kr', this)">KR</button>
+        <button class="filter-btn" onclick="filterRegion('eun1', this)">EUNE</button>
+        <button class="filter-btn" onclick="filterRegion('la1', this)">LAN</button>
+        <button class="filter-btn" onclick="filterRegion('la2', this)">LAS</button>
+        <button class="filter-btn" onclick="filterRegion('br1', this)">BR</button>
+
+        <span class="text-xs text-gray-600 font-bold uppercase tracking-wide ml-4">Build</span>
+        <button class="filter-btn active" id="buildAll" onclick="filterBuild('all', this)">All</button>
+        <button class="filter-btn" id="buildAP" onclick="filterBuild('AP', this)">AP</button>
+        <button class="filter-btn" id="buildAD" onclick="filterBuild('AD', this)">AD</button>
+    </div>
+
+    <!-- Table -->
+    <div class="card overflow-hidden">
+        <!-- Header -->
+        <div class="px-4 py-2 flex items-center gap-2 text-xs text-gray-600 font-bold uppercase tracking-wide" style="border-bottom:1px solid #1E2128;background:#0F1218;">
+            <div class="rank-badge">#</div>
+            <div class="flex-1">Player</div>
+            <div class="w-16 text-right cursor-pointer sort-btn active" id="sort-games" onclick="sortBy('games')">Games ↓</div>
+            <div class="w-16 text-right cursor-pointer sort-btn" id="sort-wr" onclick="sortBy('wr')">WR</div>
+            <div class="w-16 text-right cursor-pointer sort-btn" id="sort-kda" onclick="sortBy('kda')">KDA</div>
+            <div class="w-20 text-right">Build</div>
+        </div>
+
+        <!-- Rows -->
+        <div id="playerList"></div>
+    </div>
+
+    <p class="text-xs text-gray-700 mt-4 text-center">Only players with 20+ tracked Shaco games</p>
+</div>
+
+<script>
+const RAW_PLAYERS = {{ players | tojson }};
+
+let currentRegion = 'all';
+let currentBuild  = 'all';
+let currentSort   = 'games';
+
+function wrClass(wr) {
+    if (wr >= 54) return 'wr-high';
+    if (wr >= 48) return 'wr-mid';
+    return 'wr-low';
+}
+
+function timeSince(ts) {
+    if (!ts) return '—';
+    const diff = Date.now() - ts * 1000; // ts is in seconds
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
+}
+
+function regionLabel(r) {
+    const map = { euw1:'EUW', na1:'NA', kr:'KR', eun1:'EUNE', la1:'LAN', la2:'LAS', br1:'BR' };
+    return map[r] || r.toUpperCase();
+}
+
+function render() {
+    let players = RAW_PLAYERS.filter(p => {
+        if (currentRegion !== 'all' && p.region !== currentRegion) return false;
+        if (currentBuild !== 'all' && p.build !== currentBuild) return false;
+        return true;
+    });
+
+    players.sort((a, b) => {
+        if (currentSort === 'games') return b.games - a.games;
+        if (currentSort === 'wr')    return b.wr - a.wr;
+        if (currentSort === 'kda')   return b.kda - a.kda;
+        return 0;
+    });
+
+    const list = document.getElementById('playerList');
+    if (!players.length) {
+        list.innerHTML = '<div class="px-6 py-8 text-center text-gray-600 text-sm">No players found for this filter.</div>';
+        return;
+    }
+
+    list.innerHTML = players.map((p, i) => `
+        <a href="/player-page/${p.region}/${encodeURIComponent(p.name)}?tag=${encodeURIComponent(p.tag)}"
+           class="player-row flex items-center gap-2 px-4 py-3 fade-in" style="animation-delay:${i * 0.02}s;display:flex;">
+            <div class="rank-badge ${i < 3 ? 'top3' : ''}">${i + 1}</div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-sm text-gray-200 truncate">${p.name}</span>
+                    <span class="text-gray-600 text-xs">#${p.tag}</span>
+                    <span class="region-badge">${regionLabel(p.region)}</span>
+                </div>
+                <div class="text-xs text-gray-700 mt-0.5">last game: ${timeSince(p.last_game)}</div>
+            </div>
+            <div class="w-16 text-right">
+                <div class="font-bold text-sm text-gray-300">${p.games}</div>
+                <div class="text-xs text-gray-600">${p.wins}W</div>
+            </div>
+            <div class="w-16 text-right">
+                <div class="font-bold text-sm ${wrClass(p.wr)}">${p.wr}%</div>
+            </div>
+            <div class="w-16 text-right">
+                <div class="font-bold text-sm text-gray-300">${p.kda}</div>
+            </div>
+            <div class="w-20 text-right flex items-center justify-end gap-1">
+                <span class="${p.build === 'AP' ? 'tag-ap' : 'tag-ad'}">${p.build}</span>
+                <span class="text-xs text-gray-700">${p.ap_pct}%</span>
+            </div>
+        </a>
+    `).join('');
+}
+
+function filterRegion(val, btn) {
+    currentRegion = val;
+    // Reset only region buttons (first group)
+    btn.closest('div').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+}
+
+function filterBuild(val, btn) {
+    currentBuild = val;
+    ['buildAll','buildAP','buildAD'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+    });
+    btn.classList.add('active');
+    render();
+}
+
+function sortBy(field) {
+    currentSort = field;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`sort-${field}`);
+    if (btn) btn.classList.add('active');
+    render();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    render();
+});
+</script>
+</body>
+</html>

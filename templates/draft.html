@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draft Build Recommender – Shaco OTP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        body { background: #0B0D11; }
+        .stat-num { font-family: 'Barlow Condensed', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0B0D11; }
+        ::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 3px; }
+        .card { background: #13161C; border: 1px solid #1E2128; border-radius: 8px; }
+        .header-bg { background: linear-gradient(180deg, #0D1117 0%, #0B0D11 100%); border-bottom: 1px solid #1E2128; }
+        .accent { color: #C89B3C; }
+        .search-input {
+            background: #13161C; border: 1px solid #2A2D35; color: #E5E7EB;
+            border-radius: 6px; padding: 8px 14px; font-size: 13px; outline: none; transition: border-color 0.2s;
+            width: 100%;
+        }
+        .search-input:focus { border-color: #C89B3C; }
+        .search-input::placeholder { color: #4B5563; }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up  { animation: fadeUp 0.3s ease forwards; }
+        .fade-up-2{ animation: fadeUp 0.3s 0.1s ease both; }
+        .fade-up-3{ animation: fadeUp 0.3s 0.2s ease both; }
+
+        /* Champion input with icon preview */
+        .champ-input-wrap { position: relative; }
+        .champ-preview {
+            position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+            width: 22px; height: 22px; border-radius: 50%; border: 1px solid #2A2D35;
+            display: none;
+        }
+        .champ-input-wrap.has-icon .search-input { padding-left: 36px; }
+        .champ-input-wrap.has-icon .champ-preview { display: block; }
+
+        /* Team columns */
+        .team-col-ally  { background: #0D1520; border: 1px solid #4A90D922; border-radius: 8px; }
+        .team-col-enemy { background: #1C0D0D; border: 1px solid #D94A4A22; border-radius: 8px; }
+
+        /* Result */
+        .result-ap { background: linear-gradient(135deg, #1E1030, #130A25); border: 1px solid #7C3AED55; }
+        .result-ad { background: linear-gradient(135deg, #1A0E00, #0F0800); border: 1px solid #F9731655; }
+        .result-neutral { background: #0F1218; border: 1px solid #4A90D944; }
+
+        .confidence-high   { color: #4ADE80; background: #052e16; border: 1px solid #16a34a44; }
+        .confidence-medium { color: #FCD34D; background: #1c1200; border: 1px solid #d97706aa; }
+        .confidence-low    { color: #9CA3AF; background: #111827; border: 1px solid #37415155; }
+
+        /* Score bar */
+        .score-track { background: #1E2128; border-radius: 4px; height: 8px; overflow: hidden; display: flex; }
+        .score-ap-fill { background: linear-gradient(90deg, #7C3AED, #A855F7); transition: width 0.8s ease; }
+        .score-ad-fill { background: linear-gradient(90deg, #EA580C, #F97316); transition: width 0.8s ease; }
+
+        /* Item card */
+        .item-card { background: #1A1D24; border: 1px solid #2A2D35; border-radius: 6px; padding: 8px; display: flex; align-items: center; gap: 8px; transition: border-color 0.15s; }
+        .item-card:hover { border-color: #C89B3C44; }
+
+        /* Reason pill */
+        .reason-pill {
+            background: #1A1D24; border: 1px solid #2A2D35; border-radius: 6px;
+            padding: 6px 10px; font-size: 12px; color: #D1D5DB;
+            display: flex; align-items: flex-start; gap: 6px;
+        }
+
+        /* Role toggle */
+        .role-btn { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1px solid #2A2D35; color: #6B7280; background: #13161C; }
+        .role-btn.active { color: #C89B3C; background: #1E1A10; border-color: #C89B3C; }
+
+        /* Autocomplete */
+        .ac-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+            background: #13161C; border: 1px solid #2A2D35; border-top: none;
+            border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
+        }
+        .ac-champ { padding: 6px 10px; cursor: pointer; font-size: 12px; color: #E5E7EB; display: flex; align-items: center; gap: 8px; transition: background 0.1s; }
+        .ac-champ:hover { background: #1E2128; }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen">
+
+<!-- HEADER -->
+<header class="header-bg px-6 py-3 sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto flex items-center gap-4">
+        <a href="/" class="flex items-center gap-2 mr-2 shrink-0 no-underline">
+            <span>🔪</span>
+            <span class="font-bold text-sm tracking-wider accent">SHACO<span class="text-gray-400">STATS</span></span>
+        </a>
+        <div class="w-px h-4 bg-gray-800"></div>
+        <span class="text-sm font-semibold text-gray-400">Draft Build Recommender</span>
+        <div class="ml-auto">
+            <a href="/" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">← Back to stats</a>
+        </div>
+    </div>
+</header>
+
+<!-- HERO -->
+<div style="background:linear-gradient(180deg,#0D1520 0%,#0B0D11 100%);border-bottom:1px solid #1E2128;">
+    <div class="max-w-5xl mx-auto px-6 py-6 fade-up">
+        <div class="flex items-center gap-4">
+            <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/champion/Shaco.png"
+                 style="width:56px;height:56px;border:2px solid #C89B3C44;border-radius:10px;" alt="Shaco">
+            <div>
+                <h1 class="text-xl font-bold">AP vs AD Draft Recommender</h1>
+                <p class="text-gray-500 text-sm mt-0.5">Input both team comps and get a build recommendation based on draft heuristics.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main class="max-w-5xl mx-auto px-6 py-6">
+
+    <!-- FORM -->
+    <form method="POST" action="/draft/recommend" id="draftForm">
+
+        <!-- Role selector -->
+        <div class="flex items-center gap-3 mb-5 fade-up">
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Shaco Role</span>
+            <button type="button" class="role-btn {% if role == 'jungle' or not role %}active{% endif %}" onclick="setRole('jungle')" id="btn-jungle">🌲 Jungle</button>
+            <button type="button" class="role-btn {% if role == 'support' %}active{% endif %}" onclick="setRole('support')" id="btn-support">🛡️ Support</button>
+            <input type="hidden" name="role" id="roleInput" value="{{ role or 'jungle' }}">
+        </div>
+
+        <!-- Team inputs -->
+        <div class="grid grid-cols-2 gap-4 mb-6 fade-up-2">
+
+            <!-- Allied team -->
+            <div class="team-col-ally p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <p class="text-sm font-bold text-blue-400">Your Team <span class="text-gray-600 font-normal text-xs">(without Shaco)</span></p>
+                </div>
+                {% set ally_vals = allies if allies else ['','','',''] %}
+                {% for i in range(4) %}
+                <div class="champ-input-wrap mb-2" id="ally-wrap-{{ i }}">
+                    <img class="champ-preview" id="ally-img-{{ i }}" src="" alt="">
+                    <input type="text" name="ally{{ i+1 }}" placeholder="Ally {{ i+1 }}"
+                           class="search-input" autocomplete="off"
+                           value="{{ ally_vals[i] if i < ally_vals|length else '' }}"
+                           oninput="handleChampInput(this, 'ally-img-{{ i }}', 'ally-wrap-{{ i }}', 'ally-ac-{{ i }}')"
+                           onfocus="showAC('ally-ac-{{ i }}')"
+                           id="ally-input-{{ i }}">
+                    <div class="ac-dropdown hidden" id="ally-ac-{{ i }}"></div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Enemy team -->
+            <div class="team-col-enemy p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <p class="text-sm font-bold text-red-400">Enemy Team</p>
+                </div>
+                {% set enemy_vals = enemies if enemies else ['','','','',''] %}
+                {% for i in range(5) %}
+                <div class="champ-input-wrap mb-2" id="enemy-wrap-{{ i }}">
+                    <img class="champ-preview" id="enemy-img-{{ i }}" src="" alt="">
+                    <input type="text" name="enemy{{ i+1 }}" placeholder="Enemy {{ i+1 }}"
+                           class="search-input" autocomplete="off"
+                           value="{{ enemy_vals[i] if i < enemy_vals|length else '' }}"
+                           oninput="handleChampInput(this, 'enemy-img-{{ i }}', 'enemy-wrap-{{ i }}', 'enemy-ac-{{ i }}')"
+                           onfocus="showAC('enemy-ac-{{ i }}')"
+                           id="enemy-input-{{ i }}">
+                    <div class="ac-dropdown hidden" id="enemy-ac-{{ i }}"></div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+        <div class="flex justify-center mb-8 fade-up-2">
+            <button type="submit" class="px-10 py-3 rounded-lg text-base font-bold transition-all hover:opacity-90 active:scale-95"
+                    style="background:linear-gradient(135deg,#C89B3C,#A07830);color:#0B0D11;">
+                🔪 Analyze Draft
+            </button>
+        </div>
+
+    </form>
+
+    <!-- RESULT -->
+    {% if result %}
+    <div class="fade-up-3">
+
+        <!-- Main result card -->
+        <div class="result-{{ result.build | lower }} rounded-xl p-6 mb-4">
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Recommended Build</p>
+                        <p class="stat-num text-4xl font-bold {% if result.build == 'AP' %}text-purple-300{% else %}text-orange-300{% endif %}">
+                            {{ result.build }} Shaco
+                        </p>
+                    </div>
+                    <span class="text-4xl">{% if result.build == 'AP' %}🔮{% else %}⚔️{% endif %}</span>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Confidence</p>
+                    <span class="confidence-{{ result.confidence_color | lower }} text-sm font-bold px-3 py-1 rounded-full">
+                        {{ result.confidence }}
+                    </span>
+                    <p class="text-xs text-gray-600 mt-1">
+                        {% if result.allies_found is defined %}
+                        {{ result.allies_found + result.enemies_found }} / {{ (allies|length + enemies|length) }} champs recognized
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Score bar -->
+            <div class="mb-1 flex justify-between text-xs">
+                <span class="text-purple-400 font-bold">AP {{ result.score_ap }}%</span>
+                <span class="text-orange-400 font-bold">AD {{ result.score_ad }}%</span>
+            </div>
+            <div class="score-track mb-5">
+                <div class="score-ap-fill" style="width:{{ result.score_ap }}%"></div>
+                <div class="score-ad-fill" style="width:{{ result.score_ad }}%"></div>
+            </div>
+
+            <!-- Reasons -->
+            {% if result.reasons %}
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Why {{ result.build }}?</p>
+            <div class="flex flex-col gap-2 mb-4">
+                {% for reason in result.reasons %}
+                <div class="reason-pill">
+                    <span class="{% if result.build == 'AP' %}text-purple-400{% else %}text-orange-400{% endif %} shrink-0 mt-0.5">✓</span>
+                    <span>{{ reason }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if result.counter_reasons %}
+            <details class="mt-2">
+                <summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-400 transition-colors">
+                    Show {{ "AD" if result.build == "AP" else "AP" }} arguments
+                </summary>
+                <div class="flex flex-col gap-2 mt-2">
+                    {% for reason in result.counter_reasons %}
+                    <div class="reason-pill opacity-60">
+                        <span class="text-gray-600 shrink-0 mt-0.5">–</span>
+                        <span>{{ reason }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            <p class="text-xs text-gray-600 mt-4 italic">
+                ⚠️ This is a strategic suggestion based on draft heuristics, not a guaranteed answer. Use your own judgment.
+            </p>
+        </div>
+
+        <!-- Recommended items -->
+        <div class="card p-5">
+            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Key Items for {{ result.build }} Shaco
+            </h3>
+            <div class="grid grid-cols-2 gap-2">
+                {% for item in result.item_list %}
+                <div class="item-card">
+                    <img src="https://ddragon.leagueoflegends.com/cdn/{{ patch }}/img/item/{{ item.id }}.png"
+                         class="w-9 h-9 rounded-md shrink-0" style="border:1px solid #2A2D35;"
+                         onerror="this.style.display='none'" alt="{{ item.name }}">
+                    <div>
+                        <p class="text-xs font-bold text-gray-200">{{ item.name }}</p>
+                        <p class="text-xs text-gray-500">{{ item.reason }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if result.unknown_champs %}
+        <div class="mt-3 px-4 py-2 rounded-lg text-xs text-yellow-500" style="background:#1c1200;border:1px solid #d9770644;">
+            ⚠️ Not recognized: {{ result.unknown_champs | join(', ') }} — check spelling or try without spaces.
+        </div>
+        {% endif %}
+
+    </div>
+    {% else %}
+    <!-- Empty state -->
+    <div class="text-center py-12 fade-up-3">
+        <div class="text-5xl mb-4">🎯</div>
+        <p class="text-gray-500 text-sm">Enter the team compositions above and click Analyze Draft.</p>
+        <p class="text-gray-700 text-xs mt-1">You don't need all 9 champions — partial comps work too.</p>
+    </div>
+    {% endif %}
+
+</main>
+
+<script>
+const PATCH = "{{ patch }}";
+
+// Champion list from Data Dragon for autocomplete
+let champList = [];
+fetch(`https://ddragon.leagueoflegends.com/cdn/${PATCH}/data/en_US/champion.json`)
+    .then(r => r.json())
+    .then(data => {
+        champList = Object.keys(data.data).sort();
+    }).catch(() => {});
+
+function getChampIcon(name) {
+    return `https://ddragon.leagueoflegends.com/cdn/${PATCH}/img/champion/${name}.png`;
+}
+
+function handleChampInput(input, imgId, wrapId, acId) {
+    const val = input.value.trim();
+    const img  = document.getElementById(imgId);
+    const wrap = document.getElementById(wrapId);
+
+    // Update icon
+    if (val.length >= 2) {
+        const match = champList.find(c => c.toLowerCase() === val.toLowerCase());
+        if (match) {
+            img.src = getChampIcon(match);
+            wrap.classList.add('has-icon');
+        } else {
+            wrap.classList.remove('has-icon');
+        }
+    } else {
+        wrap.classList.remove('has-icon');
+    }
+
+    // Autocomplete
+    const ac = document.getElementById(acId);
+    if (val.length < 2) { ac.classList.add('hidden'); return; }
+    const filtered = champList.filter(c => c.toLowerCase().startsWith(val.toLowerCase())).slice(0, 8);
+    if (!filtered.length) { ac.classList.add('hidden'); return; }
+    ac.innerHTML = filtered.map(c =>
+        `<div class="ac-champ" onmousedown="selectChamp('${c}', '${input.id}', '${imgId}', '${wrapId}', '${acId}')">
+            <img src="${getChampIcon(c)}" style="width:20px;height:20px;border-radius:50%;border:1px solid #2A2D35;" onerror="this.style.display='none'">
+            <span>${c}</span>
+        </div>`
+    ).join('');
+    ac.classList.remove('hidden');
+}
+
+function selectChamp(name, inputId, imgId, wrapId, acId) {
+    document.getElementById(inputId).value = name;
+    document.getElementById(imgId).src = getChampIcon(name);
+    document.getElementById(wrapId).classList.add('has-icon');
+    document.getElementById(acId).classList.add('hidden');
+}
+
+function showAC(acId) {
+    // Will show if already populated
+}
+
+document.addEventListener('click', e => {
+    document.querySelectorAll('.ac-dropdown').forEach(d => {
+        if (!d.contains(e.target)) d.classList.add('hidden');
+    });
+});
+
+// Role toggle
+function setRole(role) {
+    document.getElementById('roleInput').value = role;
+    document.getElementById('btn-jungle').classList.toggle('active', role === 'jungle');
+    document.getElementById('btn-support').classList.toggle('active', role === 'support');
+}
+
+// Init icons for pre-filled values (after page load with result)
+window.addEventListener('DOMContentLoaded', () => {
+    // allies
+    {% if allies %}
+    {% for i in range(allies|length) %}
+    (function() {
+        const val = "{{ allies[i] }}";
+        if (val) {
+            const img = document.getElementById('ally-img-{{ i }}');
+            const wrap = document.getElementById('ally-wrap-{{ i }}');
+            if (img && wrap) { img.src = getChampIcon(val); wrap.classList.add('has-icon'); }
+        }
+    })();
+    {% endfor %}
+    {% endif %}
+    {% if enemies %}
+    {% for i in range(enemies|length) %}
+    (function() {
+        const val = "{{ enemies[i] }}";
+        if (val) {
+            const img = document.getElementById('enemy-img-{{ i }}');
+            const wrap = document.getElementById('enemy-wrap-{{ i }}');
+            if (img && wrap) { img.src = getChampIcon(val); wrap.classList.add('has-icon'); }
+        }
+    })();
+    {% endfor %}
+    {% endif %}
+});
+</script>
+
+</body>
+</html>

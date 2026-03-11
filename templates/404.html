@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Not Found — OTP Shaco</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Barlow', sans-serif; }
+        body { background: #0B0D11; color: #E5E7EB; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .condensed { font-family: 'Barlow Condensed', sans-serif; }
+        @keyframes shake { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)} }
+        .shaco-shake { animation: shake 0.5s ease-in-out 3; }
+        .search-box { background:#13161C; border:1px solid #2A2D35; border-radius:10px; transition:border-color 0.2s; }
+        .search-box:focus-within { border-color:#C89B3C; }
+        .search-btn { background:linear-gradient(135deg,#C89B3C,#E8B84B); color:#0B0D11; font-weight:800; border-radius:7px; }
+    </style>
+</head>
+<body>
+    <div class="text-center px-6" style="max-width:480px;">
+
+        <!-- Sad Shaco -->
+        <div class="flex justify-center mb-6">
+            <img src="https://ddragon.leagueoflegends.com/cdn/15.5.1/img/champion/Shaco.png"
+                 class="shaco-shake"
+                 style="width:80px;height:80px;border-radius:16px;border:2px solid #EF444455;filter:grayscale(0.5);"
+                 alt="Shaco">
+        </div>
+
+        <h1 class="condensed font-black text-4xl mb-2" style="color:#F87171;">PLAYER NOT FOUND</h1>
+
+        {% if name %}
+        <p class="text-gray-500 mb-1 text-sm">
+            <span class="font-bold text-gray-300">{{ name }}</span>
+            does not exist on Riot Games{% if region %} ({{ region.upper() }}){% endif %}.
+        </p>
+        {% endif %}
+
+        <p class="text-gray-600 text-xs mb-8">
+            Double-check the summoner name and tag. Names are case-sensitive.
+        </p>
+
+        <!-- Retry search -->
+        <form action="/search-player" method="get" class="search-box flex items-center gap-2 p-2 mb-6">
+            <input type="hidden" name="region" value="{{ region or 'euw1' }}">
+            <input
+                type="text" name="name" placeholder="Summoner name"
+                value="{{ name or '' }}"
+                class="flex-1 bg-transparent outline-none text-sm text-gray-200 placeholder-gray-600"
+                autofocus>
+            <span class="text-gray-600 font-bold">#</span>
+            <input type="text" name="tag" placeholder="EUW"
+                   class="bg-transparent outline-none text-sm text-gray-400 w-16">
+            <button type="submit" class="search-btn px-4 py-2 text-sm">Search</button>
+        </form>
+
+        <a href="/" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+            ← Back to home
+        </a>
+    </div>
+</body>
+</html>
